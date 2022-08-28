@@ -1,0 +1,98 @@
+buildings:
+  shittyminer:
+    name: Shitty Miner
+    speed_coef: 0.5
+  okminer:
+    name: OK Miner
+    speed_coef: 1.0
+  shittysmelter:
+    name: Shitty Smelter
+    speed_coef: 0.5
+  oksmelter:
+    name: OK Smelter
+    speed_coef: 1.5
+  carbonrafinery:
+    name: Carbon Refinery
+    speed_coef: 1.0
+  orecrusher:
+    name: Ore Crusher
+    speed_coef: 1.0
+items:
+  ore:
+    name: Random Ore
+  coal:
+    name: Coal
+  plate:
+    name: Random Plate
+  processedore:
+    name: Processed Random Ore
+  coke:
+    name: coke
+recipes:
+  mine-ore:
+    name: Mine ore
+    base_time: 2
+    ingredients: []
+    products:
+      - code: ore
+        qty: 1
+    buildings:
+      - shittyminer
+      - okminer
+  process-ore:
+    name: Process Ore
+    base_time: 3.0
+    ingredients:
+      - code: ore
+        qty: 1.0
+    products:
+      - code: processedore
+        qty: 2.0
+    buildings:
+      - orecrusher
+  ore-to-plate:
+    name: Ore to plate
+    base_time: 4
+    ingredients:
+      - code: ore
+        qty: 8
+    products:
+      - code: plate
+        qty: 1
+    buildings:
+      - shittysmelter
+      - oksmelter
+  mine-coal:
+    name: Mine Coal
+    base_time: 4
+    ingredients: []
+    products:
+      - code: coal
+        qty: 1
+    buildings:
+      - shittyminer
+      - okminer
+  coal-to-coke:
+    name: Make Coke
+    base_time: 2
+    ingredients:
+      - code: coal
+        qty: 1
+    products:
+      - code: coke
+        qty: 1
+    buildings:
+      - carbonrafinery
+  advanced-plate:
+    name: Advanced Plate Making
+    base_time: 2
+    ingredients:
+      - code: coke
+        qty: 1
+      - code: processedore
+        qty: 1
+    products:
+      - code: plate
+        qty: 4
+    buildings:
+      - oksmelter

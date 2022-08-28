@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture
 def resource_file() -> str:
     """The resoource file used on those tests."""
-    return "pyanodons.yaml"
+    return "testdata.yaml"
 
 
 @pytest.fixture(scope="function")
@@ -34,9 +34,9 @@ def test_load_yaml_resource(resource_file):
 
 
 test_subjects = [
-    (concepts.Item, concepts.Item, "tar", "Tar"),
-    (concepts.Building, concepts.Building, "ddcmk1", "Destructive Distillation Column MK1"),
-    (concepts.Recipe, concepts.Recipe, "coal-to-coke", "Coal to coke"),
+    (concepts.Item, concepts.Item, "coal", "Coal"),
+    (concepts.Building, concepts.Building, "orecrusher", "Ore Crusher"),
+    (concepts.Recipe, concepts.Recipe, "process-ore", "Process Ore"),
 ]
 
 
