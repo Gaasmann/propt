@@ -1,0 +1,70 @@
+buildings:
+  ddcmk1:
+    name: Destructive Distillation Column MK1
+    speed_coef: 1.0
+  hpfmk1:
+    name: High-Pressure furnace MK1
+    speed_coef: 1.0
+items:
+  raw-coal:
+    name: Raw Coal
+  coal:
+    name: Coal
+  fe-o:
+    name: Iron Oxyde
+  coal-gas:
+    name: Coal Gas
+  tar:
+    name: Tar
+  coke:
+    name: coke
+  coke-oven-gas:
+    name: Coke Oven Gas
+recipes:
+  raw-coal-to-coal:
+    name: Raw coal to coal
+    base_time: 2
+    ingredients:
+      - code: raw-coal
+        qty: 5
+    products:
+      - code: fe-o
+        qty: 0.1
+      - code: coal
+        qty: 1.5
+      - code: coal-gas
+        qty: 30
+      - code: tar
+        qty: 15
+    buildings:
+      - ddcmk1
+  coal-to-coke:
+    name: Coal to coke
+    base_time: 3
+    ingredients:
+      - code: coal
+        qty: 3.4
+    products:
+      - code: fe-o
+        qty: 0.1
+      - code: coke
+        qty: 2
+      - code: coal-gas
+        qty: 13.4
+      - code: tar
+        qty: 16.7
+    buildings:
+      - ddcmk1
+  coal-to-coal-oven-gas:
+    name: Coal to coal oven gas
+    base_time: 5
+    ingredients:
+      - code: coal
+        qty: 1.3
+    products:
+      - code: coal
+        qty: 1
+      - code: coke-oven-gas
+        qty: 5
+    buildings:
+      - hpfmk1

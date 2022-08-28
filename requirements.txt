@@ -1,0 +1,6 @@
+pytest
+black
+mypy
+pyyaml
+types-PyYAML
+pydantic
