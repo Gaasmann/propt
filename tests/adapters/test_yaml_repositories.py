@@ -17,11 +17,13 @@ def repo(request, resource_file) -> yaml_repositories.YAMLItemRepository:
     """Return a ready to use repo."""
     item_repo = yaml_repositories.YAMLItemRepository(resource_file)
     building_repo = yaml_repositories.YAMLBuildingRepository(resource_file)
-    recipe_repo = yaml_repositories.YAMLRecipeRepository(resource_file, building_repo, item_repo)
+    recipe_repo = yaml_repositories.YAMLRecipeRepository(
+        resource_file, building_repo, item_repo
+    )
     rosetta_stone = {
         concepts.Item: item_repo,
         concepts.Building: building_repo,
-        concepts.Recipe: recipe_repo
+        concepts.Recipe: recipe_repo,
     }
     return rosetta_stone[request.param]
 

@@ -15,6 +15,20 @@ class ProductionUnit(pydantic.BaseModel):
     building: concepts.Building
     quantity: int = 0
 
+    @property
+    def name(self) -> str:
+        return f"{self.recipe.name}/{self.building.name}"
+
+    def get_item_net_quantity_by_unit_of_time(self, item: concepts.Item) -> float:
+        """Return the amount of item required/produced by unit of time."""
+        return (
+            self.recipe.get_net_quantity_per_unit_of_time(item)
+            * self.building.speed_coef
+        )
+
+    class Config:
+        frozen = True
+
 
 class ProductionMap:
     """Represent all the possible ways of doing stuff."""
@@ -34,9 +48,16 @@ class ProductionMap:
         self.production_units = production_units
 
 
+class SolutionNotFound(Exception):
+    """Raised when the optimizer can't find a solution."""
+
+
 class Optimizer(metaclass=abc.ABCMeta):
     """Optimize a Production map."""
-    def __init__(self, production_map: ProductionMap, constraints: Iterable[concepts.Quantity]):
+
+    def __init__(
+        self, production_map: ProductionMap, constraints: Iterable[concepts.Quantity]
+    ):
         self._production_map = production_map
         self._constraints = list(constraints)
 

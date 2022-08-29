@@ -12,11 +12,12 @@ Code = NewType("Code", str)
 # @dataclass(frozen=True)
 class GameConcept(pydantic.BaseModel, metaclass=ABCMeta):
     """Game concept."""
+
     code: Code
     name: str
 
     class Config:
-        allow_mutation = False
+        frozen = True
 
 
 T = TypeVar("T", bound=GameConcept)
@@ -42,21 +43,35 @@ class Item(GameConcept):
 # @dataclass(frozen=True)
 class Building(GameConcept):
     """A building in the game."""
+
     speed_coef: float
 
 
 class Quantity(pydantic.BaseModel):
     """A quantity of stuff."""
+
     item: Item
     qty: float
+
+    class Config:
+        frozen = True
 
 
 class Recipe(GameConcept):
     """A recipe in the game."""
+
     base_time: float
-    ingredients: tuple[Quantity,...]
-    products: tuple[Quantity,...]
-    buildings: tuple[Building,...]
+    ingredients: tuple[Quantity, ...]
+    products: tuple[Quantity, ...]
+    buildings: tuple[Building, ...]
+
+    def get_net_quantity_per_unit_of_time(self, item: Item):
+        needed = sum(qty.qty for qty in self.ingredients if qty.item == item)
+        produced = sum(qty.qty for qty in self.products if qty.item == item)
+        if needed or produced:
+            return (produced - needed) / self.base_time
+        else:
+            raise ObjectNotFound(item)
 
 
 class ObjectNotFound(Exception):

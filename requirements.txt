@@ -4,3 +4,4 @@ mypy
 pyyaml
 types-PyYAML
 pydantic
+ortools
