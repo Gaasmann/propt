@@ -5,3 +5,7 @@ pyyaml
 types-PyYAML
 pydantic
 ortools
+networkx
+matplotlib
+pygraphviz
+pydot

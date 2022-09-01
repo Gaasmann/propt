@@ -17,7 +17,11 @@ class ProductionUnit(pydantic.BaseModel):
 
     @property
     def name(self) -> str:
-        return f"{self.recipe.name}/{self.building.name}"
+        return f"{self.recipe.name}\n{self.building.name}"
+
+    @property
+    def items(self) -> set[concepts.Item]:
+        return self.recipe.items
 
     def get_item_net_quantity_by_unit_of_time(self, item: concepts.Item) -> float:
         """Return the amount of item required/produced by unit of time."""
@@ -46,6 +50,10 @@ class ProductionMap:
 
     def __init__(self, production_units: list[ProductionUnit]):
         self.production_units = production_units
+
+    @property
+    def items(self) -> set[concepts.Item]:
+        return {item for prod_unit in self.production_units for item in prod_unit.items}
 
 
 class SolutionNotFound(Exception):

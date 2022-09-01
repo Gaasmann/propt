@@ -6,6 +6,9 @@ from propt.domain.optimizer import ProductionMap
 import propt.domain.concepts as concepts
 import itertools
 from ortools.linear_solver import pywraplp  # type: ignore
+import networkx as nx
+import matplotlib.pyplot as plt
+from networkx.drawing.nx_pydot import write_dot
 
 
 class ORToolsOptimizer(model_opt.Optimizer):
@@ -102,3 +105,36 @@ class ORToolsOptimizer(model_opt.Optimizer):
                     )
                 )
         return model_opt.ProductionMap(production_units=prod_units)
+
+
+class NetworkXProductionGraph:
+    """A production graph."""
+
+    def __init__(self, production_map: model_opt.ProductionMap):
+        self.production_map = production_map
+        self.graph = self._build_graph()
+
+    @staticmethod
+    def _item_node_name(item: concepts.Item) -> str:
+        return f"item- {item.code}"
+
+    def _build_graph(self) -> nx.DiGraph:
+        g = nx.DiGraph()
+        g.add_nodes_from(
+            (self._item_node_name(item) for item in self.production_map.items)
+        )
+        for prod_unit in self.production_map.production_units:
+            pu_node = f"PU- {prod_unit.name}\nqty- {prod_unit.quantity}"
+            g.add_node(pu_node)
+            for ingredient in prod_unit.recipe.ingredients:
+                g.add_edge(self._item_node_name(ingredient.item), pu_node)
+            for product in prod_unit.recipe.products:
+                g.add_edge(pu_node, self._item_node_name(product.item))
+        return g
+
+    def draw(self) -> None:
+        pos = nx.nx_agraph.pygraphviz_layout(self.graph, prog="neato")
+        nx.draw(self.graph, with_labels=True, pos=pos, node_size=100, font_size=6)
+        print(pos)
+        plt.show()
+        write_dot(self.graph, "/tmp/graph.dot")

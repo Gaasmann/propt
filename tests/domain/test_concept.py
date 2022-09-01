@@ -54,3 +54,14 @@ def test_recipe_net_qty_ingredients(recipe):
         recipe.get_net_quantity_per_unit_of_time(
             concepts.Item(code=concepts.Code("osef"), name="Osef")
         )
+
+
+def test_items_property(recipe):
+    """Test list_items."""
+    result = recipe.items
+    assert isinstance(result, set)
+    assert result == {
+        concepts.Item(code=concepts.Code("plate"), name="Plate"),
+        concepts.Item(code=concepts.Code("coke"), name="Coke"),
+        concepts.Item(code=concepts.Code("stick"), name="Stick"),
+    }

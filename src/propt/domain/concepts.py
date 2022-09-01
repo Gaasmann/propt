@@ -1,5 +1,7 @@
 """Game concept."""
 from __future__ import annotations
+
+import itertools
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Iterator, NewType, TypeVar, Generic
@@ -72,6 +74,13 @@ class Recipe(GameConcept):
             return (produced - needed) / self.base_time
         else:
             raise ObjectNotFound(item)
+
+    @property
+    def items(self) -> set[Item]:
+        return {
+            quantity.item
+            for quantity in itertools.chain(self.ingredients, self.products)
+        }
 
 
 class ObjectNotFound(Exception):
