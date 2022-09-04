@@ -1,5 +1,6 @@
 """Implementations of optimization."""
 import collections
+import pathlib
 
 import propt.domain.optimizer as model_opt
 from propt.domain.optimizer import ProductionMap
@@ -67,8 +68,10 @@ class ORToolsOptimizer(model_opt.Optimizer):
                 ].get_item_net_quantity_by_unit_of_time(item)
                 for prod_unit_idx in prod_unit_indexes
             ]
-
-            solver.Add(sum(lhs_constraints) >= external_constraints.get(item, 0.0))
+            min_items = external_constraints.get(item, 0.0)
+            constraint = solver.Add(sum(lhs_constraints) >= min_items)
+            if min_items == 0.0:
+                constraint.set_is_lazy(True)
 
     def _build_objective(
         self, solver: pywraplp.Solver, nb_prod_unit_vars: list[pywraplp.Variable]
@@ -78,9 +81,21 @@ class ORToolsOptimizer(model_opt.Optimizer):
 
     def optimize(self) -> ProductionMap:
         solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("SCIP")
+        solver.SetSolverSpecificParametersAsString("display/verblevel=5")
+        solver.SetSolverSpecificParametersAsString("display/lpiterations/active=2")
+        solver.SetSolverSpecificParametersAsString("display/lpinfo=TRUE")
+        # solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("CBC")
+        solver.EnableOutput()
+        solver.SetNumThreads(3)
+        # solver
+        # solver.set_time_limit(1*60*1000)
         nb_prod_unit_vars = self._build_nb_prod_unit_variables(solver)
         self._build_constraints(solver, nb_prod_unit_vars)
         self._build_objective(solver, nb_prod_unit_vars)
+        print("Ready to solve")
+        print(type(solver))
+        print(f"Number of variables: {len(solver.variables())}")
+        print(f"Number of constraints: {len(solver.constraints())}")
         status = solver.Solve()
         if status != pywraplp.Solver.OPTIMAL:
             raise model_opt.SolutionNotFound
@@ -132,9 +147,5 @@ class NetworkXProductionGraph:
                 g.add_edge(pu_node, self._item_node_name(product.item))
         return g
 
-    def draw(self) -> None:
-        pos = nx.nx_agraph.pygraphviz_layout(self.graph, prog="neato")
-        nx.draw(self.graph, with_labels=True, pos=pos, node_size=100, font_size=6)
-        print(pos)
-        plt.show()
-        write_dot(self.graph, "/tmp/graph.dot")
+    def write_dot(self, filepath: pathlib.Path) -> None:
+        write_dot(self.graph, filepath)

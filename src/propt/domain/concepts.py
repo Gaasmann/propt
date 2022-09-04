@@ -46,7 +46,14 @@ class Item(GameConcept):
 class Building(GameConcept):
     """A building in the game."""
 
+    crafting_categories: tuple[str, ...]
     speed_coef: float
+
+
+class BuildingRepository(ConceptRepository[Building], metaclass=ABCMeta):
+    @abstractmethod
+    def by_crafting_category(self, crafting_category: str) -> Iterator[Building]:
+        """Return the building matching a crafting category."""
 
 
 class Quantity(pydantic.BaseModel):
@@ -70,10 +77,7 @@ class Recipe(GameConcept):
     def get_net_quantity_per_unit_of_time(self, item: Item):
         needed = sum(qty.qty for qty in self.ingredients if qty.item == item)
         produced = sum(qty.qty for qty in self.products if qty.item == item)
-        if needed or produced:
-            return (produced - needed) / self.base_time
-        else:
-            raise ObjectNotFound(item)
+        return (produced - needed) / self.base_time
 
     @property
     def items(self) -> set[Item]:
