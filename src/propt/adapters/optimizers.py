@@ -1,6 +1,7 @@
 """Implementations of optimization."""
 import collections
 import pathlib
+from typing import Any
 
 import propt.domain.optimizer as model_opt
 from propt.domain.optimizer import ProductionMap
@@ -38,7 +39,8 @@ class ORToolsOptimizer(model_opt.Optimizer):
         len_prod_unit = len(self._production_map.production_units)
         infinity = solver.infinity()
         return [
-            solver.IntVar(0, infinity, self._production_map.production_units[idx].name)
+            # solver.IntVar(0, infinity, self._production_map.production_units[idx].name)
+            solver.NumVar(0, infinity, self._production_map.production_units[idx].name)
             for idx in range(len_prod_unit)
         ]
 
@@ -46,7 +48,7 @@ class ORToolsOptimizer(model_opt.Optimizer):
         self,
         solver: pywraplp.Solver,
         nb_prod_unit_vars: list[pywraplp.Variable],
-    ) -> None:
+    ) -> list[pywraplp.Constraint]:
         prod_unit_index = self._build_prod_unit_index()
         # Create the collection item -> qty on constraints
         external_constraints = {qty.item: qty.qty for qty in self._constraints}
@@ -60,6 +62,7 @@ class ORToolsOptimizer(model_opt.Optimizer):
             ):
                 map_item_prod_unit[qty.item].append(prod_unit_index[prod_unit])
         # Create the variables for each item IN ORDER
+        constraints: list[pywraplp.Constraint] = []
         for item, prod_unit_indexes in map_item_prod_unit.items():
             lhs_constraints = [
                 nb_prod_unit_vars[prod_unit_idx]
@@ -69,9 +72,11 @@ class ORToolsOptimizer(model_opt.Optimizer):
                 for prod_unit_idx in prod_unit_indexes
             ]
             min_items = external_constraints.get(item, 0.0)
-            constraint = solver.Add(sum(lhs_constraints) >= min_items)
+            constraint = solver.Add(sum(lhs_constraints) >= min_items, name=item.name)
+            constraints.append(constraint)
             if min_items == 0.0:
                 constraint.set_is_lazy(True)
+        return constraints
 
     def _build_objective(
         self, solver: pywraplp.Solver, nb_prod_unit_vars: list[pywraplp.Variable]
@@ -80,17 +85,17 @@ class ORToolsOptimizer(model_opt.Optimizer):
         solver.Minimize(sum(nb_prod_unit_vars))
 
     def optimize(self) -> ProductionMap:
-        solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("SCIP")
-        solver.SetSolverSpecificParametersAsString("display/verblevel=5")
-        solver.SetSolverSpecificParametersAsString("display/lpiterations/active=2")
-        solver.SetSolverSpecificParametersAsString("display/lpinfo=TRUE")
+        solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("GLOP")
+        # solver.SetSolverSpecificParametersAsString("display/verblevel=5")
+        # solver.SetSolverSpecificParametersAsString("display/lpiterations/active=2")
+        # solver.SetSolverSpecificParametersAsString("display/lpinfo=TRUE")
         # solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("CBC")
         solver.EnableOutput()
         solver.SetNumThreads(3)
         # solver
         # solver.set_time_limit(1*60*1000)
         nb_prod_unit_vars = self._build_nb_prod_unit_variables(solver)
-        self._build_constraints(solver, nb_prod_unit_vars)
+        constraints = self._build_constraints(solver, nb_prod_unit_vars)
         self._build_objective(solver, nb_prod_unit_vars)
         print("Ready to solve")
         print(type(solver))
@@ -103,6 +108,8 @@ class ORToolsOptimizer(model_opt.Optimizer):
         print("Objective value =", solver.Objective().Value())
         for var in nb_prod_unit_vars:
             print(var.name(), " = ", var.solution_value())
+        for constraint in constraints:
+            print(constraint.name(), " = ", constraint.dual_value())
         print()
         print("Problem solved in %f milliseconds" % solver.wall_time())
         print("Problem solved in %d iterations" % solver.iterations())
@@ -111,7 +118,7 @@ class ORToolsOptimizer(model_opt.Optimizer):
 
         prod_units: list[model_opt.ProductionUnit] = []
         for idx, prod_unit in enumerate(self._production_map.production_units):
-            if (qty := int(round(nb_prod_unit_vars[idx].solution_value()))) != 0:
+            if (qty := nb_prod_unit_vars[idx].solution_value()) > 0.001:
                 prod_units.append(
                     model_opt.ProductionUnit(
                         recipe=prod_unit.recipe,
@@ -131,7 +138,7 @@ class NetworkXProductionGraph:
 
     @staticmethod
     def _item_node_name(item: concepts.Item) -> str:
-        return f"item- {item.code}"
+        return f"item\n{item.code}"
 
     def _build_graph(self) -> nx.DiGraph:
         g = nx.DiGraph()
@@ -139,7 +146,7 @@ class NetworkXProductionGraph:
             (self._item_node_name(item) for item in self.production_map.items)
         )
         for prod_unit in self.production_map.production_units:
-            pu_node = f"PU- {prod_unit.name}\nqty- {prod_unit.quantity}"
+            pu_node = f"Prod unit\n{prod_unit.name}\nqty {prod_unit.quantity}"
             g.add_node(pu_node)
             for ingredient in prod_unit.recipe.ingredients:
                 g.add_edge(self._item_node_name(ingredient.item), pu_node)

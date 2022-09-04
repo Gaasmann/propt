@@ -13,7 +13,7 @@ class ProductionUnit(pydantic.BaseModel):
 
     recipe: concepts.Recipe
     building: concepts.Building
-    quantity: int = 0
+    quantity: float = 0
 
     @property
     def name(self) -> str:
