@@ -52,14 +52,9 @@ class Item(GameConcept):
 
 # @dataclass(frozen=True)
 class ItemRepository(ConceptRepository[Item], metaclass=ABCMeta):
+    @abstractmethod
     def by_building(self, building: Building) -> Item:
         """Return the item matching the given building."""
-        try:
-            return next(
-                item for item in self.list_all() if building == item.place_result
-            )
-        except StopIteration as e:
-            raise ObjectNotFound(building) from e
 
 
 class BuildingRepository(ConceptRepository[Building], metaclass=ABCMeta):
@@ -104,11 +99,11 @@ class Recipe(GameConcept):
     def items(self) -> set[Item]:
         return self.ingredient_items.union(self.product_items)
 
-    def available(self, available_technologies: Iterable[Technology]) -> bool:
+    def available(self, available_technologies: TechnologySet) -> bool:
         """Return True if the recipe is available from the start or given the given tech set."""
         if self.available_from_start:
             return True
-        return any(self in tech.recipes_unlocked for tech in available_technologies)
+        return self in available_technologies.unlocked_recipes
 
 
 class RecipeRepository(ConceptRepository[Recipe], metaclass=ABCMeta):
@@ -126,6 +121,16 @@ class Technology(GameConcept):
 
     class Config:
         frozen = True
+
+
+class TechnologySet(set[Technology]):
+    """A set storing technology and providing extra services."""
+
+    def __init__(self, technologies: Iterable[Technology]):
+        super().__init__(technologies)
+        self.unlocked_recipes: set[Recipe] = {
+            recipe for technology in self for recipe in technology.recipes_unlocked
+        }
 
 
 class ObjectNotFound(Exception):

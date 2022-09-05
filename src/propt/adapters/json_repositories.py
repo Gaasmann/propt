@@ -9,7 +9,7 @@ from typing import Any, Iterator
 
 import propt.domain.concepts as concepts
 from propt.adapters.indexer import OneToOneIndexer, MultiToMultiIndexer
-from propt.domain.concepts import Code
+from propt.domain.concepts import Code, Building, Item
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ class JSONBuildingRepository(concepts.BuildingRepository):
     # TODO boiler.json generator.json lab.json reactor.json solar panel are different
     MINING_FILENAMES = ("mining-drill.json",)
     # TODO How to deal with the boilers
+    BOILERS_FILENAMES = ("boiler.json",)
 
     def __init__(self, json_directory: pathlib.Path):
         self._buildings: list[concepts.Building] = self._build_collection(
@@ -83,6 +84,17 @@ class JSONBuildingRepository(concepts.BuildingRepository):
                 )
                 for code, building_data in data.items()
             )
+        for file in self.BOILERS_FILENAMES:
+            data = load_json_file(json_directory / file)
+            buildings.extend(
+                concepts.Building(
+                    code=concepts.Code(code),
+                    name=building_data["name"],
+                    speed_coef=1.0,
+                    crafting_categories=(building_data["name"],),
+                )
+                for code, building_data in data.items()
+            )
         return buildings
 
     def list_all(self) -> list[concepts.Building]:
@@ -111,10 +123,17 @@ class JSONItemRepository(concepts.ItemRepository):
         self, json_directory: pathlib.Path, building_repo: concepts.BuildingRepository
     ):
         self._items = self._build_collection(json_directory, building_repo)
+
         self._code_idx: OneToOneIndexer[concepts.Code, concepts.Item] = OneToOneIndexer(
             lambda x: x.code
         )
         self._code_idx.set_collection(self._items)
+
+        self._buildings_idx: OneToOneIndexer[concepts.Building, concepts.Item] = OneToOneIndexer(
+            lambda x: x.place_result
+        )
+        self._buildings_idx.set_collection(self._items)
+
 
     @staticmethod
     def _build_collection(
@@ -150,6 +169,12 @@ class JSONItemRepository(concepts.ItemRepository):
         except KeyError as e:
             raise concepts.ObjectNotFound(code) from e
 
+    def by_building(self, building: Building) -> Item:
+        try:
+            return self._buildings_idx[building]
+        except KeyError as e:
+            raise concepts.ObjectNotFound(building) from e
+
 
 class JSONRecipeRepository(concepts.RecipeRepository):
     """Recipe from JSON files."""
@@ -168,6 +193,7 @@ class JSONRecipeRepository(concepts.RecipeRepository):
         self._code_idx: OneToOneIndexer[
             concepts.Code, concepts.Recipe
         ] = OneToOneIndexer(lambda x: x.code)
+        self._code_idx.set_collection(self._recipes)
 
     @staticmethod
     def _get_items(
@@ -280,6 +306,36 @@ class JSONRecipeRepository(concepts.RecipeRepository):
                     _LOGGER.warning(
                         f"can't load the recipe:{pprint.pformat(data)}\n{e}"
                     )
+        for filename in ("boiler.json",):
+            data = load_json_file(json_directory / filename)
+            for boiler_code, boiler_data in data.items():
+                steam_throughput = (
+                    boiler_data["max_energy_usage"]
+                    / (boiler_data["target_temperature"] - 15)
+                    * 200
+                )
+                recipes.append(
+                    concepts.Recipe(
+                        code=concepts.Code(f"water-boiling-{boiler_code}"),
+                        name=f"water-boiling-{boiler_code}",
+                        available_from_start=True,  # TODO think about avail_from_start for boiler
+                        base_time=1.0,
+                        ingredients=(
+                            concepts.Quantity(
+                                item=item_repo.by_code(concepts.Code("water")),
+                                qty=steam_throughput,
+                            ),
+                        ),
+                        products=(
+                            concepts.Quantity(
+                                item=item_repo.by_code(concepts.Code("steam")),
+                                qty=steam_throughput,
+                            ),
+                        ),
+                        buildings=(building_repo.by_code(concepts.Code(boiler_code)),),
+                    )
+                )
+
         return recipes
 
     def list_all(self) -> list[concepts.Recipe]:
@@ -301,6 +357,7 @@ class JSONTechnologyRepository(concepts.ConceptRepository[concepts.Technology]):
         self._code_idx: OneToOneIndexer[
             concepts.Code, concepts.Technology
         ] = OneToOneIndexer(lambda x: x.code)
+        self._code_idx.set_collection(self._technologies)
 
     @staticmethod
     def _build_collection(
@@ -312,7 +369,7 @@ class JSONTechnologyRepository(concepts.ConceptRepository[concepts.Technology]):
             recipe_to_unlock = tuple(
                 recipe_repo.by_code(effect["recipe"])
                 for effect in tech["effects"]
-                if effect["type"] == "unlock=recipe"
+                if effect["type"] == "unlock-recipe"
             )
             techs.append(
                 concepts.Technology(

@@ -43,11 +43,16 @@ class ProductionMap:
         cls,
         recipe_repository: concepts.RecipeRepository,
         item_repository: concepts.ItemRepository,
-        technology_set: Iterable[concepts.Technology],
+        technology_set: concepts.TechnologySet,
     ) -> ProductionMap:
         production_units: list[ProductionUnit] = []
         for recipe in recipe_repository.list_all():
+            if recipe.code == "logistic-science-pack":
+                print("wait for it")
+                print(technology_set)
             if not recipe.available(technology_set):
+                if recipe.code == "logistic-science-pack":
+                    print("NEIN")
                 continue
             for building in recipe.buildings:
                 try:
