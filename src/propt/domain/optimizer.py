@@ -52,12 +52,15 @@ class ProductionMap:
             for building in recipe.buildings:
                 try:
                     if building.code == concepts.Code("character") or any(
-                            building_recipe.available(technology_set)
-                            for building_recipe in recipe_repository.by_product(
-                                item_repository.by_building(building)
-                            )):
-                        production_units.append(ProductionUnit(recipe=recipe, building=building))
-                except concepts.ObjectNotFound as e:
+                        building_recipe.available(technology_set)
+                        for building_recipe in recipe_repository.by_product(
+                            item_repository.by_building(building)
+                        )
+                    ):
+                        production_units.append(
+                            ProductionUnit(recipe=recipe, building=building)
+                        )
+                except concepts.ObjectNotFound:
                     traceback.print_exc()
 
         return cls(production_units)

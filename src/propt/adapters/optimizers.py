@@ -1,16 +1,15 @@
 """Implementations of optimization."""
 import collections
+import itertools
 import pathlib
-from typing import Any
 
+import networkx as nx  # type: ignore
+from networkx.drawing.nx_pydot import write_dot  # type: ignore
+from ortools.linear_solver import pywraplp  # type: ignore
+
+import propt.domain.concepts as concepts
 import propt.domain.optimizer as model_opt
 from propt.domain.optimizer import ProductionMap
-import propt.domain.concepts as concepts
-import itertools
-from ortools.linear_solver import pywraplp  # type: ignore
-import networkx as nx
-import matplotlib.pyplot as plt
-from networkx.drawing.nx_pydot import write_dot
 
 
 class ORToolsOptimizer(model_opt.Optimizer):

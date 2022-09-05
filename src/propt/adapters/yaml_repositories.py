@@ -1,7 +1,7 @@
 """YAML Repositories."""
 import functools
 import importlib.resources
-from typing import Iterator, Any, TypeVar, Type
+from typing import Any, TypeVar, Type
 
 import yaml
 
@@ -32,10 +32,10 @@ class YAMLRepository(concepts.ConceptRepository[T]):
     def _data_dict(self) -> dict[concepts.Code, Any]:
         return load_yaml_resource(self.resource_file)[self._KEY]
 
-    def list_all(self) -> Iterator[T]:
-        yield from (  # type: ignore
-            self._CONCEPT(code=code, **data) for code, data in self._data_dict().items()
-        )
+    def list_all(self) -> list[T]:
+        return [  # type: ignore
+            self._CONCEPT(code=code, **data) for code, data in self._data_dict().items()  # type: ignore
+        ]
 
     def by_code(self, code: Code) -> T:
         try:
@@ -100,11 +100,11 @@ class YAMLRecipeRepository(YAMLRepository[concepts.Recipe]):
         }
         return concepts.Recipe(**info)
 
-    def list_all(self) -> Iterator[concepts.Recipe]:
-        yield from (
+    def list_all(self) -> list[concepts.Recipe]:
+        return [
             self._build_recipe_from_info(code, data)
             for code, data in self._data_dict().items()
-        )
+        ]
 
     def by_code(self, code: Code) -> concepts.Recipe:
         try:

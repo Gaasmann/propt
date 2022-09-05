@@ -1,10 +1,9 @@
 """Game concept."""
 from __future__ import annotations
 
-import itertools
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
 from typing import Iterator, NewType, TypeVar, Generic, Iterable, Optional
+
 import pydantic
 
 Code = NewType("Code", str)
@@ -47,6 +46,7 @@ class Building(GameConcept):
 
 class Item(GameConcept):
     """An item in the game."""
+
     place_result: Optional[Building]
 
 
@@ -55,14 +55,16 @@ class ItemRepository(ConceptRepository[Item], metaclass=ABCMeta):
     def by_building(self, building: Building) -> Item:
         """Return the item matching the given building."""
         try:
-            return next(item for item in self.list_all() if building == item.place_result)
+            return next(
+                item for item in self.list_all() if building == item.place_result
+            )
         except StopIteration as e:
             raise ObjectNotFound(building) from e
 
 
 class BuildingRepository(ConceptRepository[Building], metaclass=ABCMeta):
     @abstractmethod
-    def by_crafting_category(self, crafting_category: str) -> Iterator[Building]:
+    def by_crafting_category(self, crafting_category: str) -> tuple[Building, ...]:
         """Return the building matching a crafting category."""
 
 
