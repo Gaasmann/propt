@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import abc
+import traceback
 from typing import Iterable
 
 import pydantic
@@ -39,13 +40,26 @@ class ProductionMap:
 
     @classmethod
     def from_repositories(
-        cls, recipe_repository: concepts.ConceptRepository[concepts.Recipe]
+        cls,
+        recipe_repository: concepts.RecipeRepository,
+        item_repository: concepts.ItemRepository,
+        technology_set: Iterable[concepts.Technology],
     ) -> ProductionMap:
-        production_units: list[ProductionUnit] = [
-            ProductionUnit(recipe=recipe, building=building)
-            for recipe in recipe_repository.list_all()
-            for building in recipe.buildings
-        ]
+        production_units: list[ProductionUnit] = []
+        for recipe in recipe_repository.list_all():
+            if not recipe.available(technology_set):
+                continue
+            for building in recipe.buildings:
+                try:
+                    if building.code == concepts.Code("character") or any(
+                            building_recipe.available(technology_set)
+                            for building_recipe in recipe_repository.by_product(
+                                item_repository.by_building(building)
+                            )):
+                        production_units.append(ProductionUnit(recipe=recipe, building=building))
+                except concepts.ObjectNotFound as e:
+                    traceback.print_exc()
+
         return cls(production_units)
 
     def __init__(self, production_units: list[ProductionUnit]):

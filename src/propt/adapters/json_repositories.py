@@ -5,6 +5,7 @@ import json
 import logging
 import pathlib
 import pprint
+import traceback
 from contextlib import suppress
 from typing import Any, Iterator
 import propt.domain.concepts as concepts
@@ -33,14 +34,17 @@ class JSONBuildingRepository(concepts.BuildingRepository):
     # TODO boiler.json generator.json lab.json reactor.json solar panel are different
     MINING_FILENAMES = ("mining-drill.json",)
     # TODO How to deal with the boilers
+
     def __init__(self, json_directory: pathlib.Path):
         self._json_directory = json_directory
 
-    def list_all(self) -> Iterator[concepts.Building]:
+    @functools.cache
+    def list_all(self) -> list[concepts.Building]:
+        buildings: list[concepts.Building] = []
         for file in self.REGULAR_FILENAMES:
             data = load_json_file(self._json_directory / file)
-            for code, building_data in data.items():
-                yield concepts.Building(
+            buildings.extend(
+                concepts.Building(
                     code=concepts.Code(code),
                     name=building_data["name"],
                     speed_coef=building_data["crafting_speed"],
@@ -50,10 +54,13 @@ class JSONBuildingRepository(concepts.BuildingRepository):
                         if active
                     ),
                 )
+                for code, building_data in data.items()
+            )
+
         for file in self.MINING_FILENAMES:
             data = load_json_file(self._json_directory / file)
-            for code, building_data in data.items():
-                yield concepts.Building(
+            buildings.extend(
+                concepts.Building(
                     code=concepts.Code(code),
                     name=building_data["name"],
                     speed_coef=building_data["mining_speed"],
@@ -63,9 +70,17 @@ class JSONBuildingRepository(concepts.BuildingRepository):
                         if active
                     ),
                 )
+                for code, building_data in data.items()
+            )
+        return buildings
 
     def by_code(self, code: Code) -> concepts.Building:
-        return next(building for building in self.list_all() if building.code == code)
+        try:
+            return next(
+                building for building in self.list_all() if building.code == code
+            )
+        except StopIteration as e:
+            raise concepts.ObjectNotFound(code) from e
 
     @functools.cache
     def by_crafting_category(self, crafting_category: str) -> tuple[concepts.Building]:
@@ -76,31 +91,51 @@ class JSONBuildingRepository(concepts.BuildingRepository):
         )
 
 
-class JSONItemRepository(concepts.ConceptRepository[concepts.Item]):
+class JSONItemRepository(concepts.ItemRepository):
     """Items from JSON files."""
 
     # REGULAR_FILENAMES = ("assembling-machine.json", "furnace.json", "rocket-silo.json")
     # # TODO boiler.json generator.json lab.json reactor.json solar panel are different
     # MINING_FILENAMES = ("mining-drill.json",)
     # # TODO How to deal with the boilers
-    def __init__(self, json_directory: pathlib.Path):
+    def __init__(
+        self, json_directory: pathlib.Path, building_repo: concepts.BuildingRepository
+    ):
         self._json_directory = json_directory
+        self._building_repo = building_repo
 
-    def list_all(self) -> Iterator[concepts.Item]:
+    @functools.cache
+    def list_all(self) -> list[concepts.Item]:
+        items: list[concepts.Item] = []
         for filename in ("item.json", "fluid.json"):
             data = load_json_file(self._json_directory / filename)
             for code, data in data.items():
-                yield concepts.Item(code=concepts.Code(code), name=data["name"])
+                try:
+                    place_result = (
+                        self._building_repo.by_code(data.get("place_result"))
+                        if data.get("place_result")
+                        else None
+                    )
+                except concepts.ObjectNotFound:
+                    place_result = None
+                items.append(
+                    concepts.Item(
+                        code=concepts.Code(code),
+                        name=data["name"],
+                        place_result=place_result,
+                    )
+                )
+        return items
 
     @functools.cache
     def by_code(self, code: Code) -> concepts.Item:
         try:
             return next(item for item in self.list_all() if item.code == code)
-        except StopIteration:
-            raise concepts.ObjectNotFound(code)
+        except StopIteration as e:
+            raise concepts.ObjectNotFound(code) from e
 
 
-class JSONRecipeRepository(concepts.ConceptRepository[concepts.Recipe]):
+class JSONRecipeRepository(concepts.RecipeRepository):
     """Recipe from JSON files."""
 
     # REGULAR_FILENAMES = ("assembling-machine.json", "furnace.json", "rocket-silo.json")
@@ -133,37 +168,57 @@ class JSONRecipeRepository(concepts.ConceptRepository[concepts.Recipe]):
             except concepts.ObjectNotFound as e:
                 _LOGGER.warning(f"Can't find item {e.args}")
 
-    @functools.cache
     def _get_buildings(
-        self, receipe_code: str, category: str
+        self,
+        data: dict[str, Any],
     ) -> tuple[concepts.Building]:
-        buildings = tuple(self._building_repo.by_crafting_category(category))
+        category = data.get("category") or data.get("resource_category") or ""
+        buildings = list(self._building_repo.by_crafting_category(category))
         if not buildings:
             _LOGGER.warning(
-                f"No building found for receipe '{receipe_code}' category: '{category}' {buildings}."
+                f"No building found for receipe '{data['name']}' category: '{category}' {buildings}."
             )
-            buildings = (next(self._building_repo.list_all()),)
-        return buildings
+            buildings = [self._building_repo.list_all()[0]]
+        if data.get("hidden_from_player_crafting") is False:
+            buildings.append(
+                concepts.Building(
+                    code=concepts.Code("character"),
+                    name="character",
+                    crafting_categories=tuple(),
+                    speed_coef=0.001,
+                )
+            )
+        return tuple(buildings)
 
-    def list_all(self) -> Iterator[concepts.Recipe]:
+    @functools.cache
+    def list_all(self) -> list[concepts.Recipe]:
         # TODO add energy
+        recipes: list[concepts.Recipe] = []
         for filename in ("recipe.json",):
             data = load_json_file(self._json_directory / filename)
             for code, data in data.items():
                 try:
                     if data["group"]["name"] == "recycling":
                         continue
-                    buildings = self._get_buildings(code, data["category"])
-                    yield concepts.Recipe(
-                        code=concepts.Code(code),
-                        name=data["name"],
-                        base_time=data["energy"],
-                        ingredients=tuple(self._get_items(data["ingredients"])),
-                        products=tuple(self._get_items(data["products"])),
-                        buildings=buildings,
+                    if data.get("subgroup", {}).get("name", "").startswith("py-void"):
+                        continue
+                    if data.get("name").startswith("blackhole-"):
+                        continue
+                    buildings = self._get_buildings(data)
+                    recipes.append(
+                        concepts.Recipe(
+                            code=concepts.Code(code),
+                            name=data["name"],
+                            available_from_start=data["enabled"],
+                            base_time=data["energy"],
+                            ingredients=tuple(self._get_items(data["ingredients"])),
+                            products=tuple(self._get_items(data["products"])),
+                            buildings=buildings,
+                        )
                     )
 
                 except Exception as e:
+                    traceback.print_exc()
                     _LOGGER.warning(
                         f"can't load the recipe:{pprint.pformat(data)}\n{e}"
                     )
@@ -171,30 +226,68 @@ class JSONRecipeRepository(concepts.ConceptRepository[concepts.Recipe]):
             data = load_json_file(self._json_directory / filename)
             for code, data in data.items():
                 try:
-                    buildings = self._get_buildings(code, data["resource_category"])
+                    buildings = self._get_buildings(data)
                     mineprop = data["mineable_properties"]
-                    yield concepts.Recipe(
-                        code=concepts.Code(f"res-{code}"),
-                        name="res-" + data["name"],
-                        base_time=mineprop["mining_time"],
-                        ingredients=(
-                            concepts.Quantity(
-                                item=self._item_repo.by_code(
-                                    mineprop["required_fluid"]
+                    recipes.append(
+                        concepts.Recipe(
+                            code=concepts.Code(f"res-{code}"),
+                            name="res-" + data["name"],
+                            available_from_start=True,
+                            base_time=mineprop["mining_time"],
+                            ingredients=(
+                                concepts.Quantity(
+                                    item=self._item_repo.by_code(
+                                        mineprop["required_fluid"]
+                                    ),
+                                    qty=mineprop["fluid_amount"],
                                 ),
-                                qty=mineprop["fluid_amount"],
-                            ),
+                            )
+                            if "required_fluid" in mineprop
+                            else tuple(),
+                            products=tuple(self._get_items(mineprop["products"])),
+                            buildings=buildings,
                         )
-                        if "required_fluid" in mineprop
-                        else tuple(),
-                        products=tuple(self._get_items(mineprop["products"])),
-                        buildings=buildings,
                     )
 
                 except Exception as e:
                     _LOGGER.warning(
                         f"can't load the recipe:{pprint.pformat(data)}\n{e}"
                     )
+        return recipes
 
+    @functools.cache
     def by_code(self, code: Code) -> concepts.Recipe:
         return next(item for item in self.list_all() if item.code == code)
+
+
+class JSONTechnologyRepository(concepts.ConceptRepository[concepts.Technology]):
+    def __init__(
+        self, recipe_repo: concepts.RecipeRepository, json_directory: pathlib.Path
+    ):
+        self._recipe_repo = recipe_repo
+        self._json_directory = json_directory
+
+    @functools.cache
+    def list_all(self) -> list[concepts.Technology]:
+        data = load_json_file(self._json_directory / "technology.json")
+        techs: list[concepts.Technology] = []
+        for code, tech in data.items():
+            recipe_to_unlock = tuple(
+                self._recipe_repo.by_code(effect["recipe"])
+                for effect in tech["effects"]
+                if effect["type"] == "unlock=recipe"
+            )
+            techs.append(
+                concepts.Technology(
+                    code=concepts.Code(code),
+                    name=tech["name"],
+                    recipes_unlocked=recipe_to_unlock,
+                )
+            )
+        return techs
+
+    def by_code(self, code: Code) -> concepts.Technology:
+        try:
+            return next(tech for tech in self.list_all() if tech.code == code)
+        except StopIteration:
+            raise concepts.ObjectNotFound(code)
