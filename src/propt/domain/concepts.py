@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Iterator, NewType, TypeVar, Generic, Iterable, Optional
+from typing import Iterator, NewType, TypeVar, Generic, Iterable, Optional, Literal
 
 import pydantic
 
@@ -47,6 +47,12 @@ class Building(GameConcept):
 class Item(GameConcept):
     """An item in the game."""
 
+    item_type: Literal[
+        "item", "fluid", "rail-planner", "item-with-entity-data", "spidertron-remote", "capsule",
+        "selection-tool", "mining-tool", "repair-tool", "blueprint", "deconstruction-item", "upgrade-item",
+        "blueprint-book", "gun", "ammo", "copy-paste-tool", "module", "tool", "armor", "item-with-inventory",
+        "item-with-label", "item-with-tags"
+    ]
     place_result: Optional[Building]
 
 
@@ -78,6 +84,7 @@ class Recipe(GameConcept):
 
     base_time: float
     available_from_start: bool
+    hidden_from_player_crafting: bool
     ingredients: tuple[Quantity, ...]
     products: tuple[Quantity, ...]
     buildings: tuple[Building, ...]
@@ -104,6 +111,12 @@ class Recipe(GameConcept):
         if self.available_from_start:
             return True
         return self in available_technologies.unlocked_recipes
+
+    @property
+    def handcraftable(self) -> bool:
+        return not self.hidden_from_player_crafting and not any(
+            item.item_type == "fluid" for item in self.items
+        )
 
 
 class RecipeRepository(ConceptRepository[Recipe], metaclass=ABCMeta):

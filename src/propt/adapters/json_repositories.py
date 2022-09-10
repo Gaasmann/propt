@@ -155,6 +155,7 @@ class JSONItemRepository(concepts.ItemRepository):
                     concepts.Item(
                         code=concepts.Code(code),
                         name=data["name"],
+                        item_type=data.get("type", "fluid"),
                         place_result=place_result,
                     )
                 )
@@ -221,18 +222,9 @@ class JSONRecipeRepository(concepts.RecipeRepository):
         buildings = list(building_repo.by_crafting_category(category))
         if not buildings:
             _LOGGER.warning(
-                f"No building found for receipe '{data['name']}' category: '{category}' {buildings}."
+                f"No building found for recipe '{data['name']}' category: '{category}' {buildings}."
             )
             buildings = [building_repo.list_all()[0]]
-        if data.get("hidden_from_player_crafting") is False:
-            buildings.append(
-                concepts.Building(
-                    code=concepts.Code("character"),
-                    name="character",
-                    crafting_categories=tuple(),
-                    speed_coef=0.001,
-                )
-            )
         return tuple(buildings)
 
     def _build_collection(
@@ -259,6 +251,7 @@ class JSONRecipeRepository(concepts.RecipeRepository):
                             code=concepts.Code(code),
                             name=data["name"],
                             available_from_start=data["enabled"],
+                            hidden_from_player_crafting=data["hidden_from_player_crafting"],
                             base_time=data["energy"],
                             ingredients=tuple(
                                 self._get_items(data["ingredients"], item_repo)
@@ -286,6 +279,7 @@ class JSONRecipeRepository(concepts.RecipeRepository):
                             code=concepts.Code(f"res-{code}"),
                             name="res-" + data["name"],
                             available_from_start=True,
+                            hidden_from_player_crafting=True,
                             base_time=mineprop["mining_time"],
                             ingredients=(
                                 concepts.Quantity(
@@ -319,6 +313,7 @@ class JSONRecipeRepository(concepts.RecipeRepository):
                         code=concepts.Code(f"water-boiling-{boiler_code}"),
                         name=f"water-boiling-{boiler_code}",
                         available_from_start=True,  # TODO think about avail_from_start for boiler
+                        hidden_from_player_crafting=True,
                         base_time=1.0,
                         ingredients=(
                             concepts.Quantity(
