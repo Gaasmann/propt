@@ -6,12 +6,11 @@ import json
 import pathlib
 from collections import defaultdict
 from collections.abc import Mapping
-from typing import Any, TypeVar, Generic
+from typing import Any, TypeVar
 
 import more_itertools
 
 import propt.domain.factorio as factorio_model
-import propt.domain.concepts as concepts
 from propt.domain.factorio import FactorioItem, FactorioFluid, FactorioRecipe
 
 T = TypeVar("T", bound=factorio_model.FactorioObject)

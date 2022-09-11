@@ -1,15 +1,13 @@
-import more_itertools
-
-import propt.adapters.json_repositories as json_repo
-import propt.domain.concepts as concepts
-import propt.adapters.optimizers as optimizers
-import propt.domain.factorio
-import propt.domain.optimizer as model_opt
-import propt.adapters.factorio_repositories.json as factorio_repos
-import propt.data.pyanodons as factorio_data
 import pathlib
 import pprint
-import pickle
+
+import more_itertools
+
+import propt.adapters.factorio_repositories.json as factorio_repos
+import propt.adapters.optimizers as optimizers
+import propt.data.pyanodons as factorio_data
+import propt.domain.factorio
+import propt.domain.optimizer as model_opt
 
 
 def main():
@@ -41,14 +39,6 @@ def main():
     resource_repository = factorio_repos.JSONFactorioResourceRepository(
         data_path, item_repo, fluid_repo
     )
-    # repo_item = factorio_repos.JSONItemRepository(pathlib.Path("pyanodons"), repo_building)
-    # repo_recipe = json_repo.JSONRecipeRepository(
-    #     repo_item, repo_building, pathlib.Path("pyanodons")
-    # )
-    # repo_assmac = json_repo.JSO(
-    #     repo_item, repo_building, pathlib.Path("pyanodons")
-    # )
-    # tech_repo = json_repo.JSONTechnologyRepository(repo_recipe, pathlib.Path("pyanodons"))
     with open("techno.txt", "r") as f:
         technologies = propt.domain.factorio.TechnologySet(
             tech_repo[code.strip()] for code in f.readlines()
@@ -122,15 +112,15 @@ def main():
     graph.write_dot(pathlib.Path("newnew.dot"))
 
 
-def debug():
-    repo_building = json_repo.JSONBuildingRepository(pathlib.Path("pyanodons"))
-    repo_item = json_repo.JSONItemRepository(pathlib.Path("pyanodons"))
-    repo_recipe = json_repo.JSONRecipeRepository(
-        repo_item, repo_building, pathlib.Path("pyanodons")
-    )
-    prod_map = model_opt.ProductionMap.from_repositories(repo_recipe)
-    pprint.pprint(prod_map)
-    return prod_map
+# def debug():
+#     repo_building = json_repo.JSONBuildingRepository(pathlib.Path("pyanodons"))
+#     repo_item = json_repo.JSONItemRepository(pathlib.Path("pyanodons"))
+#     repo_recipe = json_repo.JSONRecipeRepository(
+#         repo_item, repo_building, pathlib.Path("pyanodons")
+#     )
+#     prod_map = model_opt.ProductionMap.from_repositories(repo_recipe)
+#     pprint.pprint(prod_map)
+#     return prod_map
 
 
 if __name__ == "__main__":

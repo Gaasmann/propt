@@ -3,13 +3,10 @@ from __future__ import annotations
 
 import abc
 import itertools
-import traceback
 from typing import Iterable, Literal
 
 import pydantic
 
-import propt.domain.concepts as concepts
-import propt.domain.factorio
 import propt.domain.factorio as factorio
 
 
@@ -178,7 +175,7 @@ class ProductionUnit(pydantic.BaseModel):
     def items(self) -> set[Item]:
         return self.recipe.items
 
-    def get_item_net_quantity_by_unit_of_time(self, item: concepts.Item) -> float:
+    def get_item_net_quantity_by_unit_of_time(self, item: Item) -> float:
         """Return the amount of item required/produced by unit of time."""
         return (
             self.recipe.get_net_quantity_per_unit_of_time(item)
@@ -223,8 +220,6 @@ class ProductionMap:
             rocket_silo_repository.values(),
             mining_drill_repository.values(),
         ):
-            if building.name == "burner-mining-drill":
-                print("lol2")
             for item in item_repository.values():
                 if item.place_result and item.place_result == building:
                     for recipe in recipe_repository.get_recipes_making_stuff(item):
@@ -247,8 +242,6 @@ class ProductionMap:
         #
         production_units: list[ProductionUnit] = []
         for recipe in recipes:
-            if recipe.name == "ore-titanium":
-                print("lol")
             building_added = False
             for building in (
                 building
@@ -309,7 +302,7 @@ class ProductionMap:
             )
 
     @property
-    def items(self) -> set[concepts.Item]:
+    def items(self) -> set[Item]:
         return {item for prod_unit in self.production_units for item in prod_unit.items}
 
 

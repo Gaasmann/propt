@@ -7,7 +7,6 @@ import networkx as nx  # type: ignore
 from networkx.drawing.nx_pydot import write_dot  # type: ignore
 from ortools.linear_solver import pywraplp  # type: ignore
 
-import propt.domain.concepts as concepts
 import propt.domain.optimizer as model_opt
 from propt.domain.optimizer import ProductionMap
 
@@ -15,7 +14,7 @@ from propt.domain.optimizer import ProductionMap
 class ORToolsOptimizer(model_opt.Optimizer):
     """Optimizer using Google OR-Tools."""
 
-    def _build_item_index(self) -> dict[concepts.Item, int]:
+    def _build_item_index(self) -> dict[model_opt.Item, int]:
         item_set = {
             qty.item
             for prod_unit in self._production_map.production_units
@@ -52,7 +51,7 @@ class ORToolsOptimizer(model_opt.Optimizer):
         # Create the collection item -> qty on constraints
         external_constraints = {qty.item: qty.qty for qty in self._item_constraints}
         # Create a collection item -> index of prod unit using those
-        map_item_prod_unit: dict[concepts.Item, list[int]] = collections.defaultdict(
+        map_item_prod_unit: dict[model_opt.Item, list[int]] = collections.defaultdict(
             list
         )
         for prod_unit in self._production_map.production_units:
