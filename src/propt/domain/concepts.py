@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Iterator, NewType, TypeVar, Generic, Iterable, Optional, Literal
+from typing import Iterator, NewType, TypeVar, Generic, Optional, Literal
 
 import pydantic
+
+from propt.domain.factorio import TechnologySet
 
 Code = NewType("Code", str)
 """A code identifying a game object (recipe, building, ...)."""
@@ -48,10 +50,28 @@ class Item(GameConcept):
     """An item in the game."""
 
     item_type: Literal[
-        "item", "fluid", "rail-planner", "item-with-entity-data", "spidertron-remote", "capsule",
-        "selection-tool", "mining-tool", "repair-tool", "blueprint", "deconstruction-item", "upgrade-item",
-        "blueprint-book", "gun", "ammo", "copy-paste-tool", "module", "tool", "armor", "item-with-inventory",
-        "item-with-label", "item-with-tags"
+        "item",
+        "fluid",
+        "rail-planner",
+        "item-with-entity-data",
+        "spidertron-remote",
+        "capsule",
+        "selection-tool",
+        "mining-tool",
+        "repair-tool",
+        "blueprint",
+        "deconstruction-item",
+        "upgrade-item",
+        "blueprint-book",
+        "gun",
+        "ammo",
+        "copy-paste-tool",
+        "module",
+        "tool",
+        "armor",
+        "item-with-inventory",
+        "item-with-label",
+        "item-with-tags",
     ]
     place_result: Optional[Building]
 
@@ -134,16 +154,6 @@ class Technology(GameConcept):
 
     class Config:
         frozen = True
-
-
-class TechnologySet(set[Technology]):
-    """A set storing technology and providing extra services."""
-
-    def __init__(self, technologies: Iterable[Technology]):
-        super().__init__(technologies)
-        self.unlocked_recipes: set[Recipe] = {
-            recipe for technology in self for recipe in technology.recipes_unlocked
-        }
 
 
 class ObjectNotFound(Exception):

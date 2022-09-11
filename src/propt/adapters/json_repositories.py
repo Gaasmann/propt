@@ -129,11 +129,10 @@ class JSONItemRepository(concepts.ItemRepository):
         )
         self._code_idx.set_collection(self._items)
 
-        self._buildings_idx: OneToOneIndexer[concepts.Building, concepts.Item] = OneToOneIndexer(
-            lambda x: x.place_result
-        )
+        self._buildings_idx: OneToOneIndexer[
+            concepts.Building, concepts.Item
+        ] = OneToOneIndexer(lambda x: x.place_result)
         self._buildings_idx.set_collection(self._items)
-
 
     @staticmethod
     def _build_collection(
@@ -251,7 +250,9 @@ class JSONRecipeRepository(concepts.RecipeRepository):
                             code=concepts.Code(code),
                             name=data["name"],
                             available_from_start=data["enabled"],
-                            hidden_from_player_crafting=data["hidden_from_player_crafting"],
+                            hidden_from_player_crafting=data[
+                                "hidden_from_player_crafting"
+                            ],
                             base_time=data["energy"],
                             ingredients=tuple(
                                 self._get_items(data["ingredients"], item_repo)

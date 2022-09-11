@@ -12,31 +12,14 @@ import pytest
 @pytest.fixture
 def data() -> dict[str, Any]:
     return {
-    "name" : "solar-panel",
-    "localised_name" : [
-      "entity-name.solar-panel"
-    ],
-    "max_energy_production" : 60000,
-    "friendly_map_color" : {
-      "r" : 30,
-      "g" : 33,
-      "b" : 35,
-      "a" : 255
-    },
-    "enemy_map_color" : {
-      "r" : 255,
-      "g" : 25,
-      "b" : 25,
-      "a" : 255
-    },
-    "energy_source" : {
-      "electric" : {
-        "drain" : 0,
-        "emissions" : 0
-      }
-    },
-    "pollution" : 0
-  }
+        "name": "solar-panel",
+        "localised_name": ["entity-name.solar-panel"],
+        "max_energy_production": 60000,
+        "friendly_map_color": {"r": 30, "g": 33, "b": 35, "a": 255},
+        "enemy_map_color": {"r": 255, "g": 25, "b": 25, "a": 255},
+        "energy_source": {"electric": {"drain": 0, "emissions": 0}},
+        "pollution": 0,
+    }
 
 
 @pytest.fixture
@@ -45,9 +28,7 @@ def data_dir(data, tmp_path) -> pathlib.Path:
     data2 = copy.deepcopy(data)
     data2["name"] = "solar-panel2"
     with open(tmp_path / "solar-panel.json", "w") as f:
-        json.dump(
-            {"solar-panel": data1, "solar-panel2": data2}, f
-        )
+        json.dump({"solar-panel": data1, "solar-panel2": data2}, f)
     return tmp_path
 
 

@@ -50,7 +50,7 @@ class ORToolsOptimizer(model_opt.Optimizer):
     ) -> list[pywraplp.Constraint]:
         prod_unit_index = self._build_prod_unit_index()
         # Create the collection item -> qty on constraints
-        external_constraints = {qty.item: qty.qty for qty in self._constraints}
+        external_constraints = {qty.item: qty.qty for qty in self._item_constraints}
         # Create a collection item -> index of prod unit using those
         map_item_prod_unit: dict[concepts.Item, list[int]] = collections.defaultdict(
             list
@@ -75,6 +75,14 @@ class ORToolsOptimizer(model_opt.Optimizer):
             constraints.append(constraint)
             if min_items == 0.0:
                 constraint.set_is_lazy(True)
+        # prod_unit_constraints
+        for prod_unit_constraint in self._prod_unit_constraints:
+            constraint = solver.Add(
+                nb_prod_unit_vars[prod_unit_index[prod_unit_constraint[0]]]
+                <= prod_unit_constraint[1],
+                name=prod_unit_constraint[0].name,
+            )
+            constraints.append(constraint)
         return constraints
 
     def _build_objective(
@@ -136,8 +144,8 @@ class NetworkXProductionGraph:
         self.graph = self._build_graph()
 
     @staticmethod
-    def _item_node_name(item: concepts.Item) -> str:
-        return f"item\n{item.code}"
+    def _item_node_name(item: model_opt.Item) -> str:
+        return f"item\n{item.name}"
 
     def _build_graph(self) -> nx.DiGraph:
         g = nx.DiGraph()

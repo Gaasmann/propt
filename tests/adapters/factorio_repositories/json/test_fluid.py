@@ -12,16 +12,14 @@ import pytest
 @pytest.fixture
 def data() -> dict[str, Any]:
     return {
-    "name" : "diesel",
-    "localised_name" : [
-      "fluid-name.diesel"
-    ],
-    "order" : "z-[diesel]",
-    "default_temperature" : 10,
-    "max_temperature" : 100,
-    "fuel_value" : 1500000,
-    "emissions_multiplier" : 1
-  }
+        "name": "diesel",
+        "localised_name": ["fluid-name.diesel"],
+        "order": "z-[diesel]",
+        "default_temperature": 10,
+        "max_temperature": 100,
+        "fuel_value": 1500000,
+        "emissions_multiplier": 1,
+    }
 
 
 @pytest.fixture
@@ -30,9 +28,7 @@ def data_dir(data, tmp_path) -> pathlib.Path:
     data2 = copy.deepcopy(data)
     data2["name"] = "diesel2"
     with open(tmp_path / "fluid.json", "w") as f:
-        json.dump(
-            {"diesel": data1, "diesel2": data2}, f
-        )
+        json.dump({"diesel": data1, "diesel2": data2}, f)
     return tmp_path
 
 

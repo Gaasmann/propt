@@ -1,7 +1,10 @@
 """JSON implementation of Factorio repositories."""
+from __future__ import annotations
+
 import abc
 import json
 import pathlib
+from collections import defaultdict
 from collections.abc import Mapping
 from typing import Any, TypeVar, Generic
 
@@ -9,7 +12,7 @@ import more_itertools
 
 import propt.domain.factorio as factorio_model
 import propt.domain.concepts as concepts
-
+from propt.domain.factorio import FactorioItem, FactorioFluid, FactorioRecipe
 
 T = TypeVar("T", bound=factorio_model.FactorioObject)
 
@@ -144,15 +147,38 @@ class JSONFactorioItemRepository(
     factorio_model.FactorioItemRepository,
     JSONFactorioRepository[factorio_model.FactorioItem],
 ):
-    def __init__(self, json_directory: pathlib.Path):
+    def __init__(
+        self,
+        json_directory: pathlib.Path,
+        assembly_machine_repo: factorio_model.FactorioAssemblingMachineRepository,
+        furnace_repo: factorio_model.FactorioFurnaceRepository,
+        rocket_silo_repo: factorio_model.FactorioRocketSiloRepository,
+        mining_drill_repo: factorio_model.FactorioMiningDrillRepository,
+    ):  # TODO add all type of buildings
         super().__init__(filename="item.json")
+        self._assembly_machine_repo = assembly_machine_repo
+        self._furnace_repo = furnace_repo
+        self._rocket_silo_repo = rocket_silo_repo
+        self._mining_drill_repo = mining_drill_repo
         self._load_file(json_directory)
 
     def build_object(self, data: dict[str, Any]) -> factorio_model.FactorioItem:
+        pl = data.get("place_result")
+        place_result = (
+            (
+                self._assembly_machine_repo.get(pl)
+                or self._rocket_silo_repo.get(pl)
+                or self._furnace_repo.get(pl)
+                or self._mining_drill_repo.get(pl)
+            )
+            if pl
+            else None
+        )
         return factorio_model.FactorioItem(
             name=data["name"],
             fuel_value=data.get("fuel_value", 0),
             fuel_category=data.get("fuel_category", "no_category"),
+            place_result=place_result,
         )
 
 
@@ -225,7 +251,7 @@ class JSONFactorioReactorRepository(
 
 
 class JSONFactorioRocketSiloRepository(
-    factorio_model.FactorioAssemblingMachineRepository,
+    factorio_model.FactorioRocketSiloRepository,
     JSONFactorioRepository[factorio_model.FactorioRocketSilo],
 ):
     def __init__(self, json_directory: pathlib.Path):
@@ -322,6 +348,9 @@ class JSONFactorioRecipeRepository(
         super().__init__(filename="recipe.json")
         self._item_repo = item_repo
         self._fluid_repo = fluid_repo
+        self._recipe_per_product: dict[
+            str, set[factorio_model.FactorioRecipe]
+        ] = defaultdict(set)
         self._load_file(json_directory)
 
     def build_object(self, data) -> factorio_model.FactorioRecipe:
@@ -354,7 +383,7 @@ class JSONFactorioRecipeRepository(
                 )
                 for item in data["products"]
             )
-            return factorio_model.FactorioRecipe(
+            recipe = factorio_model.FactorioRecipe(
                 name=data["name"],
                 category=data["category"],
                 enabled=data["enabled"],
@@ -364,9 +393,17 @@ class JSONFactorioRecipeRepository(
                 ingredients=ingredients,
                 products=products,
             )
+            for product in products:
+                self._recipe_per_product[product.stuff.name].add(recipe)
+            return recipe
         except KeyError:
             print(data)
             raise
+
+    def get_recipes_making_stuff(
+        self, stuff: FactorioItem | FactorioFluid
+    ) -> set[FactorioRecipe]:
+        return self._recipe_per_product[stuff.name]
 
 
 class JSONFactorioTechnologyRepository(
@@ -390,8 +427,7 @@ class JSONFactorioTechnologyRepository(
                 if effect["type"] == "unlock-recipe"
             )
             return factorio_model.FactorioTechnology(
-                name=data["name"],
-                recipe_unlocked=recipe_unlocked
+                name=data["name"], recipe_unlocked=recipe_unlocked
             )
         except KeyError:
             print(data)
