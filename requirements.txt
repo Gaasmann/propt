@@ -10,3 +10,4 @@ networkx
 matplotlib
 pygraphviz
 pydot
+more_itertools
