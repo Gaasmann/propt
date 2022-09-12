@@ -39,6 +39,7 @@ def main():
     resource_repository = factorio_repos.JSONFactorioResourceRepository(
         data_path, item_repo, fluid_repo
     )
+    boiler_repository = factorio_repos.JSONFactorioBoilerRepository(data_path)
     with open("techno.txt", "r") as f:
         technologies = propt.domain.factorio.TechnologySet(
             tech_repo[code.strip()] for code in f.readlines()
@@ -53,6 +54,7 @@ def main():
         rocket_silo_repository=rocket_silo_repository,
         resource_repository=resource_repository,
         mining_drill_repository=mining_drill_repository,
+        boiler_repository=boiler_repository,
         technology_set=technologies,
     )
     print("prodmap")
@@ -80,6 +82,17 @@ def main():
                 ),
                 building=model_opt.Building.from_factorio_mining_drill(
                     mining_drill_repository["electric-mining-drill"]
+                ),
+            ),
+            0,
+        ),
+        (
+            model_opt.ProductionUnit(
+                recipe=model_opt.Recipe.from_factorio_resource(
+                    resource_repository["salt-rock"]
+                ),
+                building=model_opt.Building.from_factorio_mining_drill(
+                    mining_drill_repository["salt-mine"]
                 ),
             ),
             0,

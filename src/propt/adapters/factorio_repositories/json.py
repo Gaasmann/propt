@@ -305,14 +305,15 @@ class JSONFactorioResourceRepository(
 
     def build_object(self, data) -> factorio_model.FactorioResource:
         try:
+            mine_prop = data["mineable_properties"]
             return factorio_model.FactorioResource(
                 name=data["name"],
                 resource_category=data["resource_category"],
-                mining_time=data["mineable_properties"]["mining_time"],
-                required_fluid=self._fluid_repo[data["required_fluid"]]
-                if "required_fluid" in data
+                mining_time=mine_prop["mining_time"],
+                required_fluid=self._fluid_repo[mine_prop["required_fluid"]]
+                if "required_fluid" in mine_prop
                 else None,
-                fluid_amount=data.get("fluid_amount", 0),
+                fluid_amount=mine_prop.get("fluid_amount", 0) / 10,  # The amount seemed *10 in the JSON file
                 products=tuple(
                     factorio_model.Quantity(
                         item=self._item_repo[product["name"]]
@@ -322,11 +323,11 @@ class JSONFactorioResourceRepository(
                             product.get("amount")
                             or (product.get("max_amount") - product.get("min_amount"))
                         )
-                        / product.get("probability", 1)
+                        * product.get("probability", 1)
                         if product.get("probability") != 0
                         else 0,
                     )
-                    for product in data["mineable_properties"]["products"]
+                    for product in mine_prop["products"]
                 ),
             )
         except KeyError:

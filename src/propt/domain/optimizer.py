@@ -95,6 +95,20 @@ class Recipe(pydantic.BaseModel):
             category=resource.resource_category,
         )
 
+    @classmethod
+    def from_factorio_boiler(cls, boiler: factorio.FactorioBoiler) -> Recipe:
+        qty_water = boiler.max_energy_usage / ((boiler.target_temperature - 15) * 200)
+        amount_water = Amount(item=Item(name="water", type="fluid"), qty=qty_water)
+        amount_steam = Amount(item=Item(name="steam", type="fluid"), qty=qty_water)
+        return Recipe(
+            name=f"{boiler.name}-recipe",
+            hidden_from_player=True,
+            category="boiling",
+            base_time=1.0,
+            ingredients=(amount_water,),
+            products=(amount_steam,)
+        )
+
     @property
     def items(self) -> set[Item]:
         ingredients = {amount.item for amount in self.ingredients}
@@ -108,15 +122,24 @@ class Recipe(pydantic.BaseModel):
             return False
         return all(item.type == "item" for item in self.items)
 
-    def get_net_quantity_per_unit_of_time(self, item: Item) -> float:
-        production = sum(
-            amount.qty for amount in self.products if amount.item == item
-        )  # TODO check recipe producing an amount + a proba
+    def get_consumed_quantity_per_unit_of_time(self, item: Item) -> float:
         consumption = sum(
             amount.qty for amount in self.ingredients if amount.item == item
         )
+        return consumption / self.base_time
+
+    def get_produced_quantity_per_unit_of_time(self, item: Item) -> float:
+        production = sum(
+            amount.qty for amount in self.products if amount.item == item
+        )  # TODO check recipe producing an amount + a proba
+        return production / self.base_time
+
+    def get_net_quantity_per_unit_of_time(self, item: Item) -> float:
         try:
-            return (production - consumption) / self.base_time
+            return (
+                self.get_produced_quantity_per_unit_of_time(item)
+                - self.get_consumed_quantity_per_unit_of_time(item)
+            )
         except ZeroDivisionError:
             print(self)
             print(item)
@@ -159,6 +182,17 @@ class Building(pydantic.BaseModel):
             crafting_categories=mining_drill.resource_categories,
         )
 
+    @classmethod
+    def from_factorio_boiler(
+            cls,
+            boiler: factorio.FactorioBoiler
+                             ) -> Building:
+        return Building(
+            name=boiler.name,
+            speed_coefficient=1.0,
+            crafting_categories=("boiling",)
+        )
+
 
 class ProductionUnit(pydantic.BaseModel):
     """Represent a unit of production (recipe+building)."""
@@ -174,6 +208,20 @@ class ProductionUnit(pydantic.BaseModel):
     @property
     def items(self) -> set[Item]:
         return self.recipe.items
+
+    def get_item_consumed_quantity_by_unit_of_time(self, item: Item) -> float:
+        """Return the amount of item required/produced by unit of time."""
+        return (
+            self.recipe.get_consumed_quantity_per_unit_of_time(item)
+            * self.building.speed_coefficient
+        )
+
+    def get_item_produced_quantity_by_unit_of_time(self, item: Item) -> float:
+        """Return the amount of item required/produced by unit of time."""
+        return (
+            self.recipe.get_produced_quantity_per_unit_of_time(item)
+            * self.building.speed_coefficient
+        )
 
     def get_item_net_quantity_by_unit_of_time(self, item: Item) -> float:
         """Return the amount of item required/produced by unit of time."""
@@ -199,6 +247,7 @@ class ProductionMap:
         furnace_repository: factorio.FactorioFurnaceRepository,
         rocket_silo_repository: factorio.FactorioRocketSiloRepository,
         mining_drill_repository: factorio.FactorioMiningDrillRepository,
+        boiler_repository: factorio.FactorioBoilerRepository,
         technology_set: factorio.TechnologySet,
     ) -> ProductionMap:
         # define what is available
@@ -232,12 +281,15 @@ class ProductionMap:
         # Add resource recipe
         for resource in resource_repository.values():
             recipes.add(Recipe.from_factorio_resource(resource))
+        # Add boiler recipe
+        recipes.update(Recipe.from_factorio_boiler(boiler) for boiler in boiler_repository.values())
         buildings: set[Building] = {
             Building.from_factorio_mining_drill(building)
             if isinstance(building, factorio.FactorioMiningDrill)
             else Building.from_factorio_building(building)
             for building in available_buildings
         }
+        buildings.update(Building.from_factorio_boiler(boiler) for boiler in boiler_repository.values())
         # TODO place assert or something to catch when an item is unmakable
         #
         production_units: list[ProductionUnit] = []

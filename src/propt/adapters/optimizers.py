@@ -124,7 +124,7 @@ class ORToolsOptimizer(model_opt.Optimizer):
 
         prod_units: list[model_opt.ProductionUnit] = []
         for idx, prod_unit in enumerate(self._production_map.production_units):
-            if (qty := nb_prod_unit_vars[idx].solution_value()) > 0.001:
+            if (qty := nb_prod_unit_vars[idx].solution_value()) > 0.00001:
                 prod_units.append(
                     model_opt.ProductionUnit(
                         recipe=prod_unit.recipe,
@@ -155,9 +155,11 @@ class NetworkXProductionGraph:
             pu_node = f"Prod unit\n{prod_unit.name}\nqty {prod_unit.quantity}"
             g.add_node(pu_node)
             for ingredient in prod_unit.recipe.ingredients:
-                g.add_edge(self._item_node_name(ingredient.item), pu_node)
+                qty = -prod_unit.get_item_consumed_quantity_by_unit_of_time(ingredient.item)*prod_unit.quantity
+                g.add_edge(self._item_node_name(ingredient.item), pu_node, label=f"{ingredient.item.name}\n{qty:.3f}")
             for product in prod_unit.recipe.products:
-                g.add_edge(pu_node, self._item_node_name(product.item))
+                qty = prod_unit.get_item_produced_quantity_by_unit_of_time(product.item)*prod_unit.quantity
+                g.add_edge(pu_node, self._item_node_name(product.item), label=f"{product.item.name}\n{qty:.3f}")
         return g
 
     def write_dot(self, filepath: pathlib.Path) -> None:
