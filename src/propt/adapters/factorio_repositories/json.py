@@ -313,7 +313,8 @@ class JSONFactorioResourceRepository(
                 required_fluid=self._fluid_repo[mine_prop["required_fluid"]]
                 if "required_fluid" in mine_prop
                 else None,
-                fluid_amount=mine_prop.get("fluid_amount", 0) / 10,  # The amount seemed *10 in the JSON file
+                fluid_amount=mine_prop.get("fluid_amount", 0)
+                / 10,  # The amount seemed *10 in the JSON file
                 products=tuple(
                     factorio_model.Quantity(
                         item=self._item_repo[product["name"]]
@@ -365,7 +366,11 @@ class JSONFactorioRecipeRepository(
                     min_amount=item.get("min_amount", 0),
                     max_amount=item.get("max_amount", 0),
                     probability=item.get("probability", 1),
-                    temperature=item.get("temperature"),
+                    temperature=item.get("temperature")
+                    or item.get("minimum_temperature")
+                    or self._fluid_repo[item["name"]].default_temperature
+                    if item["type"] == "fluid"
+                    else None,
                 )
                 for item in data["ingredients"]
             )
@@ -379,7 +384,10 @@ class JSONFactorioRecipeRepository(
                     min_amount=item.get("min_amount", 0),
                     max_amount=item.get("max_amount", 0),
                     probability=item.get("probability", 1),
-                    temperature=item.get("temperature"),
+                    temperature=item.get("temperature")
+                    or self._fluid_repo[item["name"]].default_temperature
+                    if item["type"] == "fluid"
+                    else None,
                 )
                 for item in data["products"]
             )

@@ -7,8 +7,7 @@ import networkx as nx  # type: ignore
 from networkx.drawing.nx_pydot import write_dot  # type: ignore
 from ortools.linear_solver import pywraplp  # type: ignore
 
-import propt.domain.optimizer as model_opt
-from propt.domain.optimizer import ProductionMap
+import propt.domain.optimizer.model as model_opt
 
 
 class ORToolsOptimizer(model_opt.Optimizer):
@@ -90,7 +89,7 @@ class ORToolsOptimizer(model_opt.Optimizer):
         """Build the objective function (min nb buildings)."""
         solver.Minimize(sum(nb_prod_unit_vars))
 
-    def optimize(self) -> ProductionMap:
+    def optimize(self) -> model_opt.ProductionMap:
         solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("GLOP")
         # solver.SetSolverSpecificParametersAsString("display/verblevel=5")
         # solver.SetSolverSpecificParametersAsString("display/lpiterations/active=2")
@@ -144,7 +143,7 @@ class NetworkXProductionGraph:
 
     @staticmethod
     def _item_node_name(item: model_opt.Item) -> str:
-        return f"item\n{item.name}"
+        return f"item\n{item.name}{f'-{item.temperature}' if item.temperature else ''}"
 
     def _build_graph(self) -> nx.DiGraph:
         g = nx.DiGraph()
@@ -156,10 +155,10 @@ class NetworkXProductionGraph:
             g.add_node(pu_node)
             for ingredient in prod_unit.recipe.ingredients:
                 qty = -prod_unit.get_item_consumed_quantity_by_unit_of_time(ingredient.item)*prod_unit.quantity
-                g.add_edge(self._item_node_name(ingredient.item), pu_node, label=f"{ingredient.item.name}\n{qty:.3f}")
+                g.add_edge(self._item_node_name(ingredient.item), pu_node, label=f"{self._item_node_name(ingredient.item)[5:]}\n{qty:.3f}")
             for product in prod_unit.recipe.products:
                 qty = prod_unit.get_item_produced_quantity_by_unit_of_time(product.item)*prod_unit.quantity
-                g.add_edge(pu_node, self._item_node_name(product.item), label=f"{product.item.name}\n{qty:.3f}")
+                g.add_edge(pu_node, self._item_node_name(product.item), label=f"{self._item_node_name(product.item)[5:]}\n{qty:.3f}")
         return g
 
     def write_dot(self, filepath: pathlib.Path) -> None:

@@ -7,7 +7,8 @@ import propt.adapters.factorio_repositories.json as factorio_repos
 import propt.adapters.optimizers as optimizers
 import propt.data.pyanodons as factorio_data
 import propt.domain.factorio
-import propt.domain.optimizer as model_opt
+import propt.domain.optimizer.model as model_opt
+import propt.domain.optimizer.service as opt_service
 
 
 def main():
@@ -46,16 +47,25 @@ def main():
         )
     print("tech")
     # technologies = concepts.TechnologySet([tech_repo.by_code("automation")])
+    recipes = opt_service.convert_factorio_recipes(
+        factorio_recipes=recipe_repo,
+        resource_repository=resource_repository,
+        boiler_repository=boiler_repository,
+        available_techologies=technologies
+    )
+    s = pprint.pformat(recipes)
+    with open("blah.txt", "w") as f:
+        f.write(s)
+    # return
     prod_map = model_opt.ProductionMap.from_repositories(
+        available_recipes=recipes,
         recipe_repository=recipe_repo,
         item_repository=item_repo,
         assembly_machine_repository=assmac_repo,
         furnace_repository=furnace_repository,
         rocket_silo_repository=rocket_silo_repository,
-        resource_repository=resource_repository,
         mining_drill_repository=mining_drill_repository,
         boiler_repository=boiler_repository,
-        technology_set=technologies,
     )
     print("prodmap")
     # prod_map.add_magic_unit()
@@ -68,35 +78,35 @@ def main():
         #     item=model_opt.Item.from_factorio_item_or_fluid(item_repo["logistic-science-pack"]), qty=1
         # )
         model_opt.Amount(
-            item=model_opt.Item.from_factorio_item_or_fluid(item_repo["cdna"]), qty=1
+            item=model_opt.Item.from_factorio_item_or_fluid(item_repo["logistic-science-pack"], temperature=None), qty=1.0
         ),
         # model_opt.Amount(
-        #     item=model_opt.Item.from_factorio_item_or_fluid(item_repo["retrovirus"]), qty=-35000
+        #     item=model_opt.Item.from_factorio_item_or_fluid(item_repo["retrovirus"], temperature=None), qty=-35000
         # )
     ]
     prod_unit_constraints = [
-        (
-            model_opt.ProductionUnit(
-                recipe=model_opt.Recipe.from_factorio_resource(
-                    resource_repository["coal"]
-                ),
-                building=model_opt.Building.from_factorio_mining_drill(
-                    mining_drill_repository["electric-mining-drill"]
-                ),
-            ),
-            0,
-        ),
-        (
-            model_opt.ProductionUnit(
-                recipe=model_opt.Recipe.from_factorio_resource(
-                    resource_repository["salt-rock"]
-                ),
-                building=model_opt.Building.from_factorio_mining_drill(
-                    mining_drill_repository["salt-mine"]
-                ),
-            ),
-            0,
-        )
+        # (
+        #     model_opt.ProductionUnit(
+        #         recipe=model_opt.Recipe.from_factorio_resource(
+        #             resource_repository["coal"]
+        #         ),
+        #         building=model_opt.Building.from_factorio_mining_drill(
+        #             mining_drill_repository["electric-mining-drill"]
+        #         ),
+        #     ),
+        #     0,
+        # ),
+        # (
+        #     model_opt.ProductionUnit(
+        #         recipe=model_opt.Recipe.from_factorio_resource(
+        #             resource_repository["salt-rock"]
+        #         ),
+        #         building=model_opt.Building.from_factorio_mining_drill(
+        #             mining_drill_repository["salt-mine"]
+        #         ),
+        #     ),
+        #     0,
+        # )
     ]
     blah = model_opt.ProductionUnit(
         recipe=model_opt.Recipe.from_factorio_resource(

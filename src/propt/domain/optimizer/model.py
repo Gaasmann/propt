@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import abc
 import itertools
-from typing import Iterable, Literal
+from typing import Iterable, Literal, Optional
 
 import pydantic
 
@@ -15,14 +15,18 @@ class Item(pydantic.BaseModel):
 
     name: str
     type: Literal["item", "fluid"]
+    temperature: Optional[int] = None
 
     @classmethod
     def from_factorio_item_or_fluid(
-        cls, item: factorio.FactorioItem | factorio.FactorioFluid
+        cls,
+        item: factorio.FactorioItem | factorio.FactorioFluid,
+        temperature: Optional[int],
     ) -> Item:
         return cls(
             name=item.name,
             type="fluid" if isinstance(item, factorio.FactorioFluid) else "item",
+            temperature=temperature,
         )
 
     class Config:
@@ -51,14 +55,18 @@ class Recipe(pydantic.BaseModel):
     def from_factorio_recipe(cls, recipe: factorio.FactorioRecipe) -> Recipe:
         ingredients = tuple(
             Amount(
-                item=Item.from_factorio_item_or_fluid(famount.stuff),
+                item=Item.from_factorio_item_or_fluid(
+                    famount.stuff, famount.temperature
+                ),
                 qty=famount.average_amount,
             )
             for famount in recipe.ingredients
         )
         products = tuple(
             Amount(
-                item=Item.from_factorio_item_or_fluid(famount.stuff),
+                item=Item.from_factorio_item_or_fluid(
+                    famount.stuff, famount.temperature
+                ),
                 qty=famount.average_amount,
             )
             for famount in recipe.products
@@ -79,7 +87,10 @@ class Recipe(pydantic.BaseModel):
             base_time=resource.mining_time,
             ingredients=(
                 Amount(
-                    item=Item.from_factorio_item_or_fluid(resource.required_fluid),
+                    item=Item.from_factorio_item_or_fluid(
+                        resource.required_fluid,
+                        resource.required_fluid.default_temperature,
+                    ),
                     qty=resource.fluid_amount,
                 ),
             )
@@ -87,7 +98,13 @@ class Recipe(pydantic.BaseModel):
             else tuple(),
             products=tuple(
                 Amount(
-                    item=Item.from_factorio_item_or_fluid(product.item), qty=product.qty
+                    item=Item.from_factorio_item_or_fluid(
+                        product.item,
+                        product.item.default_temperature
+                        if isinstance(product.item, factorio.FactorioFluid)
+                        else None,
+                    ),
+                    qty=product.qty,
                 )
                 for product in resource.products
             ),
@@ -98,15 +115,15 @@ class Recipe(pydantic.BaseModel):
     @classmethod
     def from_factorio_boiler(cls, boiler: factorio.FactorioBoiler) -> Recipe:
         qty_water = boiler.max_energy_usage / ((boiler.target_temperature - 15) * 200)
-        amount_water = Amount(item=Item(name="water", type="fluid"), qty=qty_water)
-        amount_steam = Amount(item=Item(name="steam", type="fluid"), qty=qty_water)
+        amount_water = Amount(item=Item(name="water", type="fluid", temperature=15), qty=qty_water)
+        amount_steam = Amount(item=Item(name="steam", type="fluid", temperature=boiler.target_temperature), qty=qty_water)
         return Recipe(
             name=f"{boiler.name}-recipe",
             hidden_from_player=True,
             category="boiling",
             base_time=1.0,
             ingredients=(amount_water,),
-            products=(amount_steam,)
+            products=(amount_steam,),
         )
 
     @property
@@ -136,10 +153,9 @@ class Recipe(pydantic.BaseModel):
 
     def get_net_quantity_per_unit_of_time(self, item: Item) -> float:
         try:
-            return (
-                self.get_produced_quantity_per_unit_of_time(item)
-                - self.get_consumed_quantity_per_unit_of_time(item)
-            )
+            return self.get_produced_quantity_per_unit_of_time(
+                item
+            ) - self.get_consumed_quantity_per_unit_of_time(item)
         except ZeroDivisionError:
             print(self)
             print(item)
@@ -147,6 +163,24 @@ class Recipe(pydantic.BaseModel):
 
     class Config:
         frozen = True
+
+
+class RecipeSet(set[Recipe]):
+    @classmethod
+    def from_factorio_repositories(  # TODO kill that
+        cls,
+        recipe_repo: factorio.FactorioRecipeRepository,
+        resource_repo: factorio.FactorioResourceRepository,
+        boiler_repo: factorio.FactorioBoilerRepository,
+        available_tech: factorio.TechnologySet,
+    ):
+        def recipe_to_include(recipe: factorio.FactorioRecipe) -> bool:
+            return not recipe.category.startswith("recycle-")
+
+        available_factorio_recipes: set[factorio.FactorioRecipe] = {
+            recipe for recipe in recipe_repo.values() if recipe.available_from_start
+        }.union(available_tech.unlocked_recipes)
+        available_recipes = set(filter(recipe_to_include, available_factorio_recipes))
 
 
 class Building(pydantic.BaseModel):
@@ -183,14 +217,9 @@ class Building(pydantic.BaseModel):
         )
 
     @classmethod
-    def from_factorio_boiler(
-            cls,
-            boiler: factorio.FactorioBoiler
-                             ) -> Building:
+    def from_factorio_boiler(cls, boiler: factorio.FactorioBoiler) -> Building:
         return Building(
-            name=boiler.name,
-            speed_coefficient=1.0,
-            crafting_categories=("boiling",)
+            name=boiler.name, speed_coefficient=1.0, crafting_categories=("boiling",)
         )
 
 
@@ -240,27 +269,15 @@ class ProductionMap:
     @classmethod
     def from_repositories(
         cls,
+        available_recipes: RecipeSet,
         recipe_repository: factorio.FactorioRecipeRepository,
         item_repository: factorio.FactorioItemRepository,
-        resource_repository: factorio.FactorioResourceRepository,
         assembly_machine_repository: factorio.FactorioAssemblingMachineRepository,
         furnace_repository: factorio.FactorioFurnaceRepository,
         rocket_silo_repository: factorio.FactorioRocketSiloRepository,
         mining_drill_repository: factorio.FactorioMiningDrillRepository,
         boiler_repository: factorio.FactorioBoilerRepository,
-        technology_set: factorio.TechnologySet,
     ) -> ProductionMap:
-        # define what is available
-        # available factorio recipes
-        def recipe_to_include(recipe: factorio.FactorioRecipe) -> bool:
-            return not recipe.category.startswith("recycle-")
-
-        available_recipes: set[factorio.FactorioRecipe] = {
-            recipe
-            for recipe in recipe_repository.values()
-            if recipe.available_from_start
-        }.union(technology_set.unlocked_recipes)
-        available_recipes = set(filter(recipe_to_include, available_recipes))
         # Available factorio buildings
         available_buildings: set[factorio.FactorioAssemblingMachine] = set()
         for building in itertools.chain(
@@ -272,28 +289,23 @@ class ProductionMap:
             for item in item_repository.values():
                 if item.place_result and item.place_result == building:
                     for recipe in recipe_repository.get_recipes_making_stuff(item):
-                        if recipe in available_recipes:
+                        if recipe.name in (rec.name for rec in available_recipes):
                             available_buildings.add(building)
 
-        recipes: set[Recipe] = {
-            Recipe.from_factorio_recipe(recipe) for recipe in available_recipes
-        }
-        # Add resource recipe
-        for resource in resource_repository.values():
-            recipes.add(Recipe.from_factorio_resource(resource))
-        # Add boiler recipe
-        recipes.update(Recipe.from_factorio_boiler(boiler) for boiler in boiler_repository.values())
         buildings: set[Building] = {
             Building.from_factorio_mining_drill(building)
             if isinstance(building, factorio.FactorioMiningDrill)
             else Building.from_factorio_building(building)
             for building in available_buildings
         }
-        buildings.update(Building.from_factorio_boiler(boiler) for boiler in boiler_repository.values())
+        buildings.update(
+            Building.from_factorio_boiler(boiler)
+            for boiler in boiler_repository.values()
+        )
         # TODO place assert or something to catch when an item is unmakable
         #
         production_units: list[ProductionUnit] = []
-        for recipe in recipes:
+        for recipe in available_recipes:
             building_added = False
             for building in (
                 building
