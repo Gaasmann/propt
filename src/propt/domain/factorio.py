@@ -5,7 +5,7 @@ This is a conformist layer that would be further converted to the simpler model.
 from __future__ import annotations
 
 import abc
-from typing import TypeVar, Optional, Union, Literal, Iterable
+from typing import TypeVar, Optional, Union, Literal, Iterable, Any
 
 import pydantic
 
@@ -36,6 +36,7 @@ class FactorioAssemblingMachine(FactorioObject):
     module_inventory_size: int
     allowed_effects: tuple[str, ...]
     energy_source: str
+    energy_properties: tuple[tuple[str, Any], ...]
 
 
 class FactorioAssemblingMachineRepository(
@@ -54,6 +55,7 @@ class FactorioRocketSilo(FactorioObject):
     module_inventory_size: int
     allowed_effects: tuple[str, ...]
     energy_source: str
+    energy_properties: tuple[tuple[str, Any], ...]
 
 
 class FactorioRocketSiloRepository(FactorioRepository[FactorioRocketSilo]):
@@ -74,6 +76,7 @@ class FactorioBoiler(FactorioObject):
     max_energy_usage: int
     target_temperature: int
     energy_source: str
+    energy_properties: tuple[tuple[str, Any], ...]
 
 
 class FactorioBoilerRepository(FactorioRepository[FactorioBoiler]):
@@ -103,6 +106,7 @@ class FactorioFurnace(FactorioObject):
     module_inventory_size: int
     allowed_effects: tuple[str, ...]
     energy_source: str
+    energy_properties: tuple[tuple[str, Any], ...]
 
 
 class FactorioFurnaceRepository(FactorioRepository[FactorioFurnace]):
@@ -118,6 +122,7 @@ class FactorioGenerator(FactorioObject):
     fluid_usage_per_tick: float
     max_energy_production: int
     energy_source: str
+    energy_properties: tuple[tuple[str, Any], ...]
 
 
 class FactorioGeneratorRepository(FactorioRepository[FactorioGenerator]):
@@ -134,6 +139,7 @@ class FactorioMiningDrill(FactorioObject):
     allowed_effects: tuple[str, ...]
     energy_source: str
     energy_effectivity: float
+    energy_properties: tuple[tuple[str, Any], ...]
     fuel_category: tuple[str, ...]
 
 
@@ -176,6 +182,7 @@ class FactorioReactor(FactorioObject):
     max_energy_usage: int
     neighbour_bonus: int
     energy_source: str
+    energy_properties: tuple[tuple[str, Any], ...]
     energy_effectivity: float
     fuel_category: tuple[str, ...]
 

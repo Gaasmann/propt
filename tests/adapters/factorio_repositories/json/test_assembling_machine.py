@@ -3,7 +3,7 @@ import copy
 import json
 import pathlib
 from typing import Any
-import propt.adapters.factorio_repositories.json as repos
+import propt.adapters.new_factorio_repositories.json as repos
 import propt.domain.factorio as factorio_domain
 
 import pytest

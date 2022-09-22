@@ -6,7 +6,7 @@ from typing import Any
 
 import more_itertools
 
-import propt.adapters.factorio_repositories.json as repos
+import propt.adapters.new_factorio_repositories.json as repos
 import propt.domain.factorio as factorio_domain
 import propt.data.pyanodons as factorio_data
 
