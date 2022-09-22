@@ -7,9 +7,8 @@ from typing import Any, Iterable
 
 import more_itertools
 
-from propt.adapters.new_factorio_repositories.json.base import JSONFactorioRepository
-from propt.domain import factorio as factorio_model
-from propt.domain.new_factorio import repositories as repo_model, prototypes as prototypes
+from propt.adapters.factorio_repositories.json.base import JSONFactorioRepository
+from propt.domain.factorio import repositories as repo_model, prototypes as prototypes
 
 
 class JSONFactorioAggregateBuildingRepository(repo_model.BuildingRepository):
@@ -82,16 +81,16 @@ class JSONFactorioFurnaceRepository(
 
 # TODO
 class JSONFactorioGeneratorRepository(
-    factorio_model.FactorioGeneratorRepository,
-    JSONFactorioRepository[factorio_model.FactorioGenerator],
+    repo_model.BuildingRepository,
+    JSONFactorioRepository[prototypes.Building],
 ):
     def __init__(self, json_directory: pathlib.Path):
         super().__init__(filename="generator.json")
         self._load_file(json_directory)
 
-    def build_object(self, data: dict[str, Any]) -> factorio_model.FactorioGenerator:
+    def build_object(self, data: dict[str, Any]) -> prototypes.Building:
         assert len(data["energy_source"].keys()) < 2
-        return factorio_model.FactorioGenerator(
+        return prototypes.Building(
             name=data["name"],
             max_temperature=data["maximum_temperature"],
             effectivity=data["effectivity"],
@@ -130,17 +129,17 @@ class JSONFactorioMiningDrillRepository(
 
 # TODO
 class JSONFactorioReactorRepository(
-    factorio_model.FactorioReactorRepository,
-    JSONFactorioRepository[factorio_model.FactorioReactor],
+    repo_model.BuildingRepository,
+    JSONFactorioRepository[repo_model.BuildingRepository],
 ):
     def __init__(self, json_directory: pathlib.Path):
         super().__init__(filename="reactor.json")
         self._load_file(json_directory)
 
-    def build_object(self, data: dict[str, Any]) -> factorio_model.FactorioReactor:
+    def build_object(self, data: dict[str, Any]) -> prototypes.Building:
         assert len(data["energy_source"]) < 2
         print(data)
-        return factorio_model.FactorioReactor(
+        return prototypes.Building(
             name=data["name"],
             max_energy_usage=data["max_energy_usage"],
             neighbour_bonus=data["neighbour_bonus"],
@@ -183,14 +182,14 @@ class JSONFactorioRocketSiloRepository(
 
 # TODO
 class JSONFactorioSolarPanelRepository(
-    factorio_model.FactorioSolarPanelRepository,
-    JSONFactorioRepository[factorio_model.FactorioSolarPanel],
+    repo_model.BuildingRepository,
+    JSONFactorioRepository[prototypes.Building],
 ):
     def __init__(self, json_directory: pathlib.Path):
         super().__init__(filename="solar-panel.json")
         self._load_file(json_directory)
 
-    def build_object(self, data: dict[str, Any]) -> factorio_model.FactorioSolarPanel:
-        return factorio_model.FactorioSolarPanel(
+    def build_object(self, data: dict[str, Any]) -> prototypes.Building:
+        return prototypes.Building(
             name=data["name"], max_energy_production=data["max_energy_production"]
         )

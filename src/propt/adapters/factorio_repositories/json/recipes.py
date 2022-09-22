@@ -6,9 +6,9 @@ import pathlib
 from collections import defaultdict
 from typing import Any, Iterable
 
-import propt.domain.new_factorio.prototypes as prototypes
-import propt.domain.new_factorio.repositories as repo_models
-import propt.adapters.new_factorio_repositories.json.base as json_base
+import propt.domain.factorio.prototypes as prototypes
+import propt.domain.factorio.repositories as repo_models
+import propt.adapters.factorio_repositories.json.base as json_base
 
 
 class JSONFactorioAggregateRecipeRepository(repo_models.RecipeRepository):

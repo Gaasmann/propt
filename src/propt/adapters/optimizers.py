@@ -15,10 +15,10 @@ class ORToolsOptimizer(model_opt.Optimizer):
 
     def _build_item_index(self) -> dict[model_opt.Item, int]:
         item_set = {
-            qty.item
+            item
             for prod_unit in self._production_map.production_units
-            for qty in itertools.chain(
-                prod_unit.recipe.ingredients, prod_unit.recipe.products
+            for item in itertools.chain(
+                prod_unit.ingredients.keys(), prod_unit.products.keys()
             )
         }
         return {item: idx for idx, item in enumerate(item_set)}
@@ -48,16 +48,16 @@ class ORToolsOptimizer(model_opt.Optimizer):
     ) -> list[pywraplp.Constraint]:
         prod_unit_index = self._build_prod_unit_index()
         # Create the collection item -> qty on constraints
-        external_constraints = {qty.item: qty.qty for qty in self._item_constraints}
+        external_constraints = dict(self._item_constraints)
         # Create a collection item -> index of prod unit using those
         map_item_prod_unit: dict[model_opt.Item, list[int]] = collections.defaultdict(
             list
         )
         for prod_unit in self._production_map.production_units:
-            for qty in itertools.chain(
-                prod_unit.recipe.ingredients, prod_unit.recipe.products
+            for item in itertools.chain(
+                prod_unit.ingredients.keys(), prod_unit.products.keys()
             ):
-                map_item_prod_unit[qty.item].append(prod_unit_index[prod_unit])
+                map_item_prod_unit[item].append(prod_unit_index[prod_unit])
         # Create the variables for each item IN ORDER
         constraints: list[pywraplp.Constraint] = []
         for item, prod_unit_indexes in map_item_prod_unit.items():
@@ -69,7 +69,8 @@ class ORToolsOptimizer(model_opt.Optimizer):
                 for prod_unit_idx in prod_unit_indexes
             ]
             min_items = external_constraints.get(item, 0.0)
-            constraint = solver.Add(sum(lhs_constraints) >= min_items, name=item.name)
+            constraint = solver.Add(sum(lhs_constraints) == min_items, name=item.name)
+            # constraint = solver.Add(sum(lhs_constraints) >= min_items, name=item.name)
             constraints.append(constraint)
             if min_items == 0.0:
                 constraint.set_is_lazy(True)
@@ -126,8 +127,10 @@ class ORToolsOptimizer(model_opt.Optimizer):
             if (qty := nb_prod_unit_vars[idx].solution_value()) > 0.00001:
                 prod_units.append(
                     model_opt.ProductionUnit(
-                        recipe=prod_unit.recipe,
-                        building=prod_unit.building,
+                        recipe_name=prod_unit.recipe_name,
+                        building_name=prod_unit.building_name,
+                        ingredients=prod_unit.ingredients,
+                        products=prod_unit.products,
                         quantity=qty,
                     )
                 )
@@ -153,12 +156,12 @@ class NetworkXProductionGraph:
         for prod_unit in self.production_map.production_units:
             pu_node = f"Prod unit\n{prod_unit.name}\nqty {prod_unit.quantity}"
             g.add_node(pu_node)
-            for ingredient in prod_unit.recipe.ingredients:
-                qty = -prod_unit.get_item_consumed_quantity_by_unit_of_time(ingredient.item)*prod_unit.quantity
-                g.add_edge(self._item_node_name(ingredient.item), pu_node, label=f"{self._item_node_name(ingredient.item)[5:]}\n{qty:.3f}")
-            for product in prod_unit.recipe.products:
-                qty = prod_unit.get_item_produced_quantity_by_unit_of_time(product.item)*prod_unit.quantity
-                g.add_edge(pu_node, self._item_node_name(product.item), label=f"{self._item_node_name(product.item)[5:]}\n{qty:.3f}")
+            for ingredient in prod_unit.ingredients.keys():
+                qty = -prod_unit.get_item_consumed_quantity_by_unit_of_time(ingredient)*prod_unit.quantity
+                g.add_edge(self._item_node_name(ingredient), pu_node, label=f"{self._item_node_name(ingredient)[5:]}\n{qty:.3f}")
+            for product in prod_unit.products:
+                qty = prod_unit.get_item_produced_quantity_by_unit_of_time(product)*prod_unit.quantity
+                g.add_edge(pu_node, self._item_node_name(product), label=f"{self._item_node_name(product)[5:]}\n{qty:.3f}")
         return g
 
     def write_dot(self, filepath: pathlib.Path) -> None:

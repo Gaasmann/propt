@@ -6,7 +6,7 @@ import more_itertools
 import pytest
 import propt.data.pyanodons as factorio_data
 import propt.domain.factorio as factorio_model
-import propt.adapters.new_factorio_repositories.json as repos
+import propt.adapters.factorio_repositories.json as repos
 
 @pytest.fixture
 def resource_file() -> str:

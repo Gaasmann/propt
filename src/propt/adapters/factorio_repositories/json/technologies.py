@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import pathlib
 
-import propt.domain.new_factorio.repositories as repo_models
-import propt.domain.new_factorio.prototypes as prototypes
-import propt.adapters.new_factorio_repositories.json.base as json_base
+import propt.domain.factorio.repositories as repo_models
+import propt.domain.factorio.prototypes as prototypes
+import propt.adapters.factorio_repositories.json.base as json_base
 
 
 class JSONFactorioTechnologyRepository(

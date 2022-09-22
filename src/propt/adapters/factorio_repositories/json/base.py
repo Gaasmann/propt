@@ -7,8 +7,8 @@ import pathlib
 from collections.abc import Mapping
 from typing import Any, TypeVar
 
-import propt.domain.new_factorio.prototypes as prototypes
-import propt.domain.new_factorio.repositories as repo_model
+import propt.domain.factorio.prototypes as prototypes
+import propt.domain.factorio.repositories as repo_model
 
 
 T = TypeVar("T", bound=prototypes.Prototype)

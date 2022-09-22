@@ -2,7 +2,7 @@
 import abc
 from typing import TypeVar
 
-import propt.domain.new_factorio.prototypes as prototypes
+import propt.domain.factorio.prototypes as prototypes
 
 T = TypeVar("T", bound=prototypes.Prototype)
 
