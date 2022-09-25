@@ -21,11 +21,11 @@ def test_prod_map_from_repo(repositories):
     assert isinstance(prod_map.production_units[0], optimizer.ProductionUnit)
 
 
-@pytest.fixture
-def prod_unit(repositories) -> optimizer.ProductionUnit:
-    recipe = repositories[factorio_model.FactorioRecipe]["ore-to-plate"]
-    building = repositories[factorio_model.FactorioFurnace]["stone-furnace"]
-    return optimizer.ProductionUnit(recipe=recipe, building=building)
+# @pytest.fixture
+# def prod_unit(repositories) -> optimizer.ProductionUnit:
+#     recipe = repositories[factorio_model.FactorioRecipe]["ore-to-plate"]
+#     building = repositories[factorio_model.FactorioFurnace]["stone-furnace"]
+#     return optimizer.ProductionUnit(recipe=recipe, building=building)
 
 
 def test_pu_get_item_quantity_ingredients(prod_unit):
@@ -65,3 +65,21 @@ def test_prod_unit_get_quantity(repositories):
         building=optimizer.Building.from_factorio_mining_drill(building)
     )
     assert prod_unit.get_item_net_quantity_by_unit_of_time(item) == pytest.approx(1.4)
+
+
+
+def test_item_equality():
+    import propt.domain.optimizer.model as opt
+    no_energy = opt.Item(name="dudul", temperature=None, energy_ingredient=False)
+    energy = opt.Item(name="dudul", temperature=None, energy_ingredient=True)
+    assert no_energy == energy
+    assert hash(no_energy) == hash(energy)
+
+
+def test_item_inequality():
+    import propt.domain.optimizer.model as opt
+    no_energy = opt.Item(name="dudul", temperature=None, energy_ingredient=False)
+    energy = opt.Item(name="toto", temperature=None, energy_ingredient=True)
+    assert no_energy != energy
+    assert hash(no_energy) != hash(energy)
+

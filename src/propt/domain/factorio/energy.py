@@ -5,9 +5,8 @@ from typing import Any, Type, TYPE_CHECKING
 
 import pydantic
 
-import propt.domain
 if TYPE_CHECKING:
-    from propt.domain.factorio.prototypes import Ingredient, ItemIngredient, FluidIngredient
+    from propt.domain.factorio.prototypes import Ingredient, FluidIngredient, Building
     from propt.domain.factorio.object_set import RecipeSet
     from propt.domain.factorio import repositories as repos
 
@@ -34,7 +33,7 @@ class Energy(pydantic.BaseModel, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def return_sources(
         self,
-        building: propt.domain.factorio.buildings.Building,
+        building: Building,
         available_recipes: RecipeSet,
         item_repo: repos.ItemRepository,
         fluid_repo: repos.FluidRepository,
@@ -55,13 +54,15 @@ class Electricity(Energy):
 
     def return_sources(
         self,
-        building: propt.domain.factorio.buildings.Building,
+        building: Building,
         available_recipes: RecipeSet,
         item_repo: repos.ItemRepository,
         fluid_repo: repos.FluidRepository,
     ) -> list[Ingredient]:
+        import propt.domain.factorio.prototypes as prototypes
+        electricity = prototypes.Item(name="Electricity")
         return [
-            # ItemIngredient(obj=ELECTRICITY, amount=building.energy_usage, energy_ingredient=True),
+            prototypes.ItemIngredient(obj=electricity, amount=building.energy_usage, energy_ingredient=True),
         ]
 
 
@@ -76,24 +77,25 @@ class Burner(Energy):
         """Create from data"""
         return Burner(
             effectivity=data.get("effectivity", 1.0),
-            fuel_categories={
+            fuel_categories=frozenset({
                 cat for cat, active in data["fuel_categories"].items() if active
-            },
+            }),
         )
 
     def return_sources(
         self,
-        building: propt.domain.factorio.buildings.Building,
+        building: Building,
         available_recipes: RecipeSet,
         item_repo: repos.ItemRepository,
         fluid_repo: repos.FluidRepository,
     ) -> list[Ingredient]:
         ingredients: list[Ingredient] = []
-        return []
+        # return []
+        import propt.domain.factorio.prototypes as prototypes
         for item in item_repo.values():
             if item.fuel_category in self.fuel_categories and item.fuel_value > 0:
                 ingredients.append(
-                    ItemIngredient(
+                    prototypes.ItemIngredient(
                         obj=item,
                         amount=building.energy_usage
                         / (item.fuel_value * self.effectivity),
@@ -113,7 +115,7 @@ class Heat(Energy):
 
     def return_sources(
         self,
-        building: propt.domain.factorio.buildings.Building,
+        building: Building,
         available_recipes: RecipeSet,
         item_repo: repos.ItemRepository,
         fluid_repo: repos.FluidRepository,
@@ -133,7 +135,7 @@ class Void(Energy):
 
     def return_sources(
         self,
-        building: propt.domain.factorio.buildings.Building,
+        building: Building,
         available_recipes: RecipeSet,
         item_repo: repos.ItemRepository,
         fluid_repo: repos.FluidRepository,
@@ -160,18 +162,19 @@ class FluidEnergy(Energy):
 
     def return_sources(
         self,
-        building: propt.domain.factorio.buildings.Building,
+        building: Building,
         available_recipes: RecipeSet,
         item_repo: repos.ItemRepository,
         fluid_repo: repos.FluidRepository,
     ) -> list[Ingredient]:
         ingredients: list[FluidIngredient] = []
-        return []
+        # return []
+        import propt.domain.factorio.prototypes as prototypes
         for fluid in fluid_repo.values():
             if self.burns_fluid and fluid.fuel_value:
                 print(f"AMOUNT {building}||{fluid}||{building.energy_usage/ (fluid.fuel_value * self.effectivity)}")
                 ingredients.append(
-                    FluidIngredient(
+                    prototypes.FluidIngredient(
                         obj=fluid,
                         amount=building.energy_usage
                         / (fluid.fuel_value * self.effectivity),
@@ -179,7 +182,7 @@ class FluidEnergy(Energy):
                         max_temperature=fluid.default_temperature,
                         energy_ingredient=True
                     )
-                )  # TODO  can't make it solve with those constraint :-(
+                )
             elif not self.burns_fluid:
                 valid_temps = {
                     temp
@@ -189,7 +192,7 @@ class FluidEnergy(Energy):
                 for temp in valid_temps:
                     print(f"AMOUNT {building.energy_usage / (temp * fluid.heat_capacity * self.effectivity)}")
                     ingredients.append(
-                        FluidIngredient(
+                        prototypes.FluidIngredient(
                             obj=fluid,
                             min_temperature=temp,
                             max_temperature=temp,

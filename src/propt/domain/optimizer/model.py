@@ -20,8 +20,13 @@ class Item(pydantic.BaseModel):
 
     name: str
     temperature: Optional[int] = None
-    energy_ingredient: bool = False
+    energy_ingredient: bool = False  # TODO lot of trouble for this parameter. Shouldn't be there
 
+    def __eq__(self, other):
+        return self.name == other.name and self.temperature == other.temperature if isinstance(other, self.__class__) else False
+
+    def __hash__(self):
+        return hash(tuple(self.dict(exclude={"energy_ingredient"}).items()))
     class Config:
         frozen = True
 

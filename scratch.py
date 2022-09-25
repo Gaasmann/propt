@@ -11,7 +11,6 @@ import propt.adapters.optimizers as optimizers
 import propt.data.pyanodons as factorio_data
 import propt.domain.factorio.object_set
 import propt.domain.factorio.prototypes
-import propt.domain.factorio.prototypes as prototypes
 import propt.domain.optimizer.model as new_opt_model
 
 
