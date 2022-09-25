@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import itertools
-from typing import Iterable
 
 import pydantic
+
+from propt.domain.factorio.energy import Energy
 
 
 class Prototype(pydantic.BaseModel):
@@ -22,18 +23,20 @@ class Object(Prototype):
     name: str
 
 
-
 class Building(Prototype):
     """A building."""
 
     energy_usage: int
     speed_coefficient: float
     crafting_categories: tuple[str, ...]
+    energy_info: Energy
 
 
 class Item(Object):
     """A solid object."""
 
+    fuel_category: str | None = None
+    fuel_value: int | None = None
     place_result: Building | None = None
 
 
@@ -45,6 +48,9 @@ class Fluid(Object):
 
     default_temperature: int = 15
     max_temperature: int = 15
+    fuel_value: int = 0
+    heat_capacity: int = 1000
+    """Heat capacity in J/°C"""
 
 
 # TODO check max_temperature for heat
@@ -55,6 +61,8 @@ class Ingredient(pydantic.BaseModel):
     """An ingredient in a recipe."""
 
     obj: Object
+    energy_ingredient: bool = False
+    """If true, this ingredient won't be affected by recipe time and stuff"""
     amount: float
 
     class Config:
@@ -130,18 +138,9 @@ class Recipe(Prototype):
         )
 
 
-
 class Technology(Prototype):
     """A factorio technology."""
 
     recipe_unlocked: tuple[Recipe, ...]
 
 
-class TechnologySet(set[Technology]):
-    """A set storing technology and providing extra services."""
-
-    def __init__(self, technologies: Iterable[Technology]):
-        super().__init__(technologies)
-        self.unlocked_recipes: set[Recipe] = {
-            recipe for technology in self for recipe in technology.recipe_unlocked
-        }

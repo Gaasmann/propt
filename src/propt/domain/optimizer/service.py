@@ -4,6 +4,8 @@ from typing import Iterable
 
 import more_itertools
 
+import propt.domain.factorio.object_set
+import propt.domain.factorio.prototypes
 import propt.domain.optimizer.model as opt_model
 import propt.domain.factorio as factorio_model
 
@@ -97,7 +99,7 @@ def convert_factorio_recipes(
     resource_repository: factorio_model.FactorioResourceRepository,
     boiler_repository: factorio_model.FactorioBoilerRepository,
     available_techologies: factorio_model.TechnologySet,
-) -> opt_model.RecipeSet:
+) -> propt.domain.factorio.object_set.RecipeSet:
     """Convert the factorio recipes to optimizer recipes."""
     available_recipes = _filter_out_unavailable_factorio_recipes(
         factorio_recipes, available_techologies
@@ -117,4 +119,4 @@ def convert_factorio_recipes(
     )
     # get temperatures and expand
     temperatures = _gather_produced_item_temperatures(recipes)
-    return opt_model.RecipeSet(_expend_recipes_by_temperature(recipes, temperatures))
+    return propt.domain.factorio.object_set.RecipeSet(_expend_recipes_by_temperature(recipes, temperatures))

@@ -22,6 +22,8 @@ class JSONFactorioFluidRepository(
             name=data["name"],
             default_temperature=data["default_temperature"],
             max_temperature=data["max_temperature"],
+            fuel_value=data.get("fuel_value"),
+            heat_capacity=1000 if data["name"] != "steam" else 200
         )
 
 
@@ -43,5 +45,7 @@ class JSONFactorioItemRepository(
         place_result = self._building_repo.get(pl) if pl else None
         return prototypes.Item(
             name=data["name"],
+            fuel_category=data.get("fuel_category"),
+            fuel_value=data.get("fuel_value"),
             place_result=place_result,
         )

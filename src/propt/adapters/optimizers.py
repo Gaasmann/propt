@@ -69,8 +69,10 @@ class ORToolsOptimizer(model_opt.Optimizer):
                 for prod_unit_idx in prod_unit_indexes
             ]
             min_items = external_constraints.get(item, 0.0)
-            constraint = solver.Add(sum(lhs_constraints) == min_items, name=item.name)
-            # constraint = solver.Add(sum(lhs_constraints) >= min_items, name=item.name)
+            if min_items == 0.0:
+                constraint = solver.Add(sum(lhs_constraints) == min_items, name=f"{item.name}-{item.temperature}")
+            else:  # Target constraints
+                constraint = solver.Add(sum(lhs_constraints) >= min_items, name=item.name)
             constraints.append(constraint)
             if min_items == 0.0:
                 constraint.set_is_lazy(True)
@@ -79,7 +81,7 @@ class ORToolsOptimizer(model_opt.Optimizer):
             constraint = solver.Add(
                 nb_prod_unit_vars[prod_unit_index[prod_unit_constraint[0]]]
                 <= prod_unit_constraint[1],
-                name=prod_unit_constraint[0].name,
+                name=f"{prod_unit_constraint[0].name}-chier",
             )
             constraints.append(constraint)
         return constraints
@@ -95,7 +97,7 @@ class ORToolsOptimizer(model_opt.Optimizer):
         # solver.SetSolverSpecificParametersAsString("display/verblevel=5")
         # solver.SetSolverSpecificParametersAsString("display/lpiterations/active=2")
         # solver.SetSolverSpecificParametersAsString("display/lpinfo=TRUE")
-        # solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("CBC")
+        # solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("GLPK_LP")
         solver.EnableOutput()
         solver.SetNumThreads(3)
         # solver
@@ -107,6 +109,7 @@ class ORToolsOptimizer(model_opt.Optimizer):
         print(type(solver))
         print(f"Number of variables: {len(solver.variables())}")
         print(f"Number of constraints: {len(solver.constraints())}")
+        # solver.
         status = solver.Solve()
         if status != pywraplp.Solver.OPTIMAL:
             raise model_opt.SolutionNotFound
@@ -157,9 +160,12 @@ class NetworkXProductionGraph:
             pu_node = f"Prod unit\n{prod_unit.name}\nqty {prod_unit.quantity}"
             g.add_node(pu_node)
             for ingredient in prod_unit.ingredients.keys():
+                if ingredient in (model_opt.Item(name="Electricity"), model_opt.Item(name="water", temperature=15)):
+                    continue  # skipping electricity and water-15
                 qty = -prod_unit.get_item_consumed_quantity_by_unit_of_time(ingredient)*prod_unit.quantity
                 g.add_edge(self._item_node_name(ingredient), pu_node, label=f"{self._item_node_name(ingredient)[5:]}\n{qty:.3f}")
             for product in prod_unit.products:
+
                 qty = prod_unit.get_item_produced_quantity_by_unit_of_time(product)*prod_unit.quantity
                 g.add_edge(pu_node, self._item_node_name(product), label=f"{self._item_node_name(product)[5:]}\n{qty:.3f}")
         return g

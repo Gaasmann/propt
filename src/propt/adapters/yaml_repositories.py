@@ -8,6 +8,9 @@ import yaml
 import propt.domain.concepts as concepts
 from propt.domain.concepts import Code
 
+import propt.domain.factorio.buildings
+import propt.domain.factorio.prototypes
+
 
 @functools.cache
 def load_yaml_resource(resource_file: str) -> dict[str, Any]:
@@ -51,10 +54,10 @@ class YAMLItemRepository(YAMLRepository[concepts.Item]):
     _KEY = "items"
 
 
-class YAMLBuildingRepository(YAMLRepository[concepts.Building]):
+class YAMLBuildingRepository(YAMLRepository[propt.domain.factorio.prototypes.Building]):
     """Repository for Buildings stored in a YAML file."""
 
-    _CONCEPT = concepts.Building
+    _CONCEPT = propt.domain.factorio.prototypes.Building
     _KEY = "buildings"
 
 
@@ -67,7 +70,7 @@ class YAMLRecipeRepository(YAMLRepository[concepts.Recipe]):
     def __init__(
         self,
         resource_file: str,
-        building_repository: concepts.ConceptRepository[concepts.Building],
+        building_repository: concepts.ConceptRepository[propt.domain.factorio.prototypes.Building],
         item_repository: concepts.ConceptRepository[concepts.Item],
     ):
         super().__init__(resource_file)

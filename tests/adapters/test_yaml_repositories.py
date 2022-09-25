@@ -5,6 +5,9 @@ import propt.adapters.yaml_repositories as yaml_repositories
 import propt.domain.concepts as concepts
 import pytest
 
+import propt.domain.factorio.buildings
+import propt.domain.factorio.prototypes
+
 
 @pytest.fixture
 def resource_file() -> str:
@@ -22,7 +25,7 @@ def repo(request, resource_file) -> yaml_repositories.YAMLItemRepository:
     )
     rosetta_stone = {
         concepts.Item: item_repo,
-        concepts.Building: building_repo,
+        propt.domain.factorio.prototypes.Building: building_repo,
         concepts.Recipe: recipe_repo,
     }
     return rosetta_stone[request.param]
@@ -37,7 +40,7 @@ def test_load_yaml_resource(resource_file):
 
 test_subjects = [
     (concepts.Item, concepts.Item, "coal", "Coal"),
-    (concepts.Building, concepts.Building, "orecrusher", "Ore Crusher"),
+    (propt.domain.factorio.prototypes.Building, propt.domain.factorio.prototypes.Building, "orecrusher", "Ore Crusher"),
     (concepts.Recipe, concepts.Recipe, "process-ore", "Process Ore"),
 ]
 

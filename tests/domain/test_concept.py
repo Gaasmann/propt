@@ -3,6 +3,9 @@ import pytest
 
 import propt.domain.concepts as concepts
 
+import propt.domain.factorio.buildings
+import propt.domain.factorio.prototypes
+
 
 def test_concept_are_immutable():
     """Check the concepts are really immutable."""
@@ -27,7 +30,7 @@ def recipe() -> concepts.Recipe:
         ),
     )
     buildings = (
-        concepts.Building(
+        propt.domain.factorio.prototypes.Building(
             code=concepts.Code("factory"), name="Factory", speed_coef=2.0
         ),
     )
