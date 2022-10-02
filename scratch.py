@@ -14,6 +14,26 @@ import propt.domain.factorio.prototypes
 import propt.domain.optimizer.model as new_opt_model
 
 
+def add_mining_constraint(
+    prod_map: new_opt_model.ProductionMap,
+        ore_name: str,
+        capa_elec_drill: int,
+        capa_burning_drill: int,
+):
+    array1 = [
+        (pu, capa_elec_drill)
+        for pu in prod_map.production_units
+        if pu.recipe_name.startswith(ore_name)
+           and pu.building_name == "electric-mining-drill"
+    ]
+    array2 = [
+        (pu, capa_burning_drill)
+        for pu in prod_map.production_units
+        if pu.recipe_name.startswith(ore_name)
+           and pu.building_name == "burner-mining-drill"
+    ]
+    return [*array1, *array2]
+
 def main():
     data_path = pathlib.Path(more_itertools.first(factorio_data.__path__))
     # buildings
@@ -24,7 +44,7 @@ def main():
             building_repos.JSONFactorioMiningDrillRepository(data_path),
             building_repos.JSONFactorioRocketSiloRepository(data_path),
             building_repos.JSONFactorioBoilerBuildingRepository(data_path),
-            building_repos.JSONFactorioGeneratorRepository(data_path)
+            building_repos.JSONFactorioGeneratorRepository(data_path),
         )
     )
     # Objects
@@ -48,8 +68,10 @@ def main():
             tech_repo[code.strip()] for code in f.readlines()
         )
     # filter available recipes/buildings
-    available_recipes = propt.domain.factorio.object_set.RecipeSet.from_factorio_repositories(
-        recipe_repo, technologies
+    available_recipes = (
+        propt.domain.factorio.object_set.RecipeSet.from_factorio_repositories(
+            recipe_repo, technologies
+        )
     )
     gen_repo = recipe_repos.JSONFactorioGeneratorRecipeRepository(
         json_directory=data_path,
@@ -64,11 +86,13 @@ def main():
                 data_path, item_repo, fluid_repo
             ),
             recipe_repos.JSONFactorioBoilerRecipeRepository(data_path, fluid_repo),
-            gen_repo
+            gen_repo,
         )
     )
-    available_recipes = propt.domain.factorio.object_set.RecipeSet.from_factorio_repositories(
-        recipe_repo, technologies
+    available_recipes = (
+        propt.domain.factorio.object_set.RecipeSet.from_factorio_repositories(
+            recipe_repo, technologies
+        )
     )
 
     debug.dump("available_recipe2", available_recipes)
@@ -82,14 +106,18 @@ def main():
         available_recipes=available_recipes,
         available_buildings=available_buildings,
         item_repo=item_repo,
-        fluid_repo=fluid_repo
+        fluid_repo=fluid_repo,
     )
     debug.dump("prod_units", prod_map.production_units)
 
     # prod_map.add_magic_unit()
     item_constraints = [
-        (new_opt_model.Item(name="automation-science-pack", temperature=None), 1),
-        (new_opt_model.Item(name="logistic-science-pack", temperature=None), 2),
+        (new_opt_model.Item(name="automation-science-pack", temperature=None), 4/6),
+        (new_opt_model.Item(name="logistic-science-pack", temperature=None), 2/6),
+        (new_opt_model.Item(name="Electricity", temperature=None), 2_000_000),
+        (new_opt_model.Item(name="big-electric-pole", temperature=None), 1),
+        (new_opt_model.Item(name="reo", temperature=None), 1),
+        # (new_opt_model.Item(name="py-logistic-robot-01", temperature=None), 0.2),
         # (new_opt_model.Item(name="syngas", temperature=15), -10000000),
         # (new_opt_model.Item(name="ash", temperature=None), -10000000),
     ]
@@ -100,35 +128,44 @@ def main():
             ),
             0,
         ),
-        *[(pu, 0) for pu in prod_map.production_units if pu.recipe_name == "coal-0"],
-        *[(pu, 0) for pu in prod_map.production_units if pu.recipe_name == "coal-1"],
-        *[(pu, 0) for pu in prod_map.production_units if pu.recipe_name == "tar-patch-0"],
-        *[(pu, 0) for pu in prod_map.production_units if "kicalk" in pu.recipe_name],
-        *[(pu, 0) for pu in prod_map.production_units if "vonix" in pu.recipe_name],
-        *[(pu, 0) for pu in prod_map.production_units if "trits" in pu.recipe_name],
-        *[(pu, 0) for pu in prod_map.production_units if "xyhiphoe" in pu.recipe_name],
-        *[(pu, 0) for pu in prod_map.production_units if "bones" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "fuelrod" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "diesel" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "starch" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "zipir" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "yotoi" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "cridren" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "yaedols" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "xeno" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "sap-tree" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "arqad" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "fuel" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "kerosene" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "gasoline" in pu.recipe_name and pu.building_name=="magic-building"],
-        *[(pu, 0) for pu in prod_map.production_units if "caged" in pu.recipe_name and pu.building_name=="magic-building"],
-        # *[(pu, 0) for pu in prod_map.production_units if pu.recipe_name.startswith("meat-to-tin")],
-        *[(pu, 0) for pu in prod_map.production_units if new_opt_model.Item(name="nuclear-fuel") in pu.ingredients],
+        (
+            next(
+                pu
+                for pu in prod_map.production_units
+                if pu.recipe_name == "raw-coal-0"
+                and pu.building_name == "electric-mining-drill"
+            ),
+            64,
+        ),
+        *add_mining_constraint(prod_map, "raw-coal", 64+74, 0),
+        *add_mining_constraint(prod_map, "coal", 0, 0),
+        *add_mining_constraint(prod_map, "copper-ore", 45, 0),
+        *add_mining_constraint(prod_map, "ore-lead", 48, 0),
+        *add_mining_constraint(prod_map, "ore-titanium", 37, 0), # not enough
+        *add_mining_constraint(prod_map, "ore-aluminium", 22, 0),
+        *add_mining_constraint(prod_map, "ore-tin", 26, 0), # not enough
+        *add_mining_constraint(prod_map, "ore-iron", 125, 0),
+        # *add_mining_constraint(prod_map, "ore-zinc", 125, 0), # need some
+
+
+        *[(pu, 0) for pu in prod_map.production_units if pu.building_name.startswith("bitumen-seep-mk")],
+        # *[(pu, 0) for pu in prod_map.production_units if pu.recipe_name == "coal-1"],
+        *[
+            (pu, 0)
+            for pu in prod_map.production_units
+            if pu.recipe_name == "tar-patch-0"
+        ],
+        *[
+            (pu, 0)
+            for pu in prod_map.production_units
+            if pu.building_name == "natural-gas-seep-mk01"
+        ],
     ]
     optim = optimizers.ORToolsOptimizer(
         prod_map, item_constraints, prod_unit_constraints
     )
     result = optim.optimize()
+    debug.dump("results", result.production_units)
 
     graph_begin = optimizers.NetworkXProductionGraph(prod_map)
     graph_begin.write_dot(pathlib.Path("all.dot"))

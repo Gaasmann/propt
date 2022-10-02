@@ -93,11 +93,11 @@ class ORToolsOptimizer(model_opt.Optimizer):
         solver.Minimize(sum(nb_prod_unit_vars))
 
     def optimize(self) -> model_opt.ProductionMap:
-        solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("GLOP")
+        # solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("GLOP")
         # solver.SetSolverSpecificParametersAsString("display/verblevel=5")
         # solver.SetSolverSpecificParametersAsString("display/lpiterations/active=2")
         # solver.SetSolverSpecificParametersAsString("display/lpinfo=TRUE")
-        # solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("GLPK_LP")
+        solver: pywraplp.Solver = pywraplp.Solver.CreateSolver("CLP")
         solver.EnableOutput()
         solver.SetNumThreads(3)
         # solver
@@ -115,10 +115,10 @@ class ORToolsOptimizer(model_opt.Optimizer):
             raise model_opt.SolutionNotFound
         print()
         print("Objective value =", solver.Objective().Value())
-        for var in nb_prod_unit_vars:
-            print(var.name(), " = ", var.solution_value())
-        for constraint in constraints:
-            print(constraint.name(), " = ", constraint.dual_value())
+        # for var in nb_prod_unit_vars:
+        #     print(var.name(), " = ", var.solution_value())
+        # for constraint in constraints:
+        #     print(constraint.name(), " = ", constraint.dual_value())
         print()
         print("Problem solved in %f milliseconds" % solver.wall_time())
         print("Problem solved in %d iterations" % solver.iterations())
