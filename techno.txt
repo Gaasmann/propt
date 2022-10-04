@@ -86,3 +86,7 @@ fluid-wagon
 logistic-robotics
 logistic-train-network
 logistic-system
+battery
+electric-energy-accumulators
+excavation-1
+machines-mk02

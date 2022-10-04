@@ -128,15 +128,15 @@ def main():
             ),
             0,
         ),
-        (
-            next(
-                pu
-                for pu in prod_map.production_units
-                if pu.recipe_name == "raw-coal-0"
-                and pu.building_name == "electric-mining-drill"
-            ),
-            64,
-        ),
+        # (
+        #     next(
+        #         pu
+        #         for pu in prod_map.production_units
+        #         if pu.recipe_name == "raw-coal-0"
+        #         and pu.building_name == "electric-mining-drill"
+        #     ),
+        #     64,
+        # ),
         *add_mining_constraint(prod_map, "raw-coal", 64+74, 0),
         *add_mining_constraint(prod_map, "coal", 0, 0),
         *add_mining_constraint(prod_map, "copper-ore", 45, 0),
@@ -149,6 +149,7 @@ def main():
 
 
         *[(pu, 0) for pu in prod_map.production_units if pu.building_name.startswith("bitumen-seep-mk")],
+        *[(pu, 0) for pu in prod_map.production_units if pu.building_name.startswith("natural-gas-seep-mk")],
         # *[(pu, 0) for pu in prod_map.production_units if pu.recipe_name == "coal-1"],
         *[
             (pu, 0)

@@ -4,7 +4,7 @@ import itertools
 import pathlib
 
 import networkx as nx  # type: ignore
-from networkx.drawing.nx_pydot import write_dot  # type: ignore
+from networkx.drawing.nx_agraph import write_dot  # type: ignore
 from ortools.linear_solver import pywraplp  # type: ignore
 
 import propt.domain.optimizer.model as model_opt
@@ -152,7 +152,7 @@ class NetworkXProductionGraph:
         return f"item\n{item.name}{f'-{item.temperature}' if item.temperature else ''}"
 
     def _build_graph(self) -> nx.DiGraph:
-        g = nx.DiGraph()
+        g = nx.DiGraph(mclimit=4.0, nodesep=1.5, ranksep=1.0, packmode="node", splines="curved")
         g.add_nodes_from(
             (self._item_node_name(item) for item in self.production_map.items)
         )
@@ -163,11 +163,11 @@ class NetworkXProductionGraph:
                 if ingredient in (model_opt.Item(name="Electricity"), model_opt.Item(name="water", temperature=15)):
                     continue  # skipping electricity and water-15
                 qty = -prod_unit.get_item_consumed_quantity_by_unit_of_time(ingredient)*prod_unit.quantity
-                g.add_edge(self._item_node_name(ingredient), pu_node, label=f"{self._item_node_name(ingredient)[5:]}\n{qty:.3f}")
+                g.add_edge(self._item_node_name(ingredient), pu_node, headlabel=f"{self._item_node_name(ingredient)[5:]}\n{qty:.3f}")
             for product in prod_unit.products:
 
                 qty = prod_unit.get_item_produced_quantity_by_unit_of_time(product)*prod_unit.quantity
-                g.add_edge(pu_node, self._item_node_name(product), label=f"{self._item_node_name(product)[5:]}\n{qty:.3f}")
+                g.add_edge(pu_node, self._item_node_name(product), taillabel=f"{self._item_node_name(product)[5:]}\n{qty:.3f}")
         return g
 
     def write_dot(self, filepath: pathlib.Path) -> None:
