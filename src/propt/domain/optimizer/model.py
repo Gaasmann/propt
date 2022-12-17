@@ -20,13 +20,20 @@ class Item(pydantic.BaseModel):
 
     name: str
     temperature: Optional[int] = None
-    energy_ingredient: bool = False  # TODO lot of trouble for this parameter. Shouldn't be there
+    energy_ingredient: bool = (
+        False  # TODO lot of trouble for this parameter. Shouldn't be there
+    )
 
     def __eq__(self, other):
-        return self.name == other.name and self.temperature == other.temperature if isinstance(other, self.__class__) else False
+        return (
+            self.name == other.name and self.temperature == other.temperature
+            if isinstance(other, self.__class__)
+            else False
+        )
 
     def __hash__(self):
         return hash(tuple(self.dict(exclude={"energy_ingredient"}).items()))
+
     class Config:
         frozen = True
 
@@ -83,7 +90,7 @@ class ProductionUnit(pydantic.BaseModel):
                     temperature=ingredient.min_temperature
                     if isinstance(ingredient, prototypes.FluidIngredient)
                     else None,
-                    energy_ingredient=True
+                    energy_ingredient=True,
                 ),
                 ingredient.amount,
             )
@@ -95,19 +102,17 @@ class ProductionUnit(pydantic.BaseModel):
             filter(lambda x: x, (*expended_ingredients, energy_ingredients))
         )
         for nb, ingredient_set in enumerate(itertools.product(*ingredients)):
+            final_ingredients = defaultdict(int)
+            for ingredient in ingredient_set:
+                final_ingredients[ingredient[0]] += (
+                    ingredient[1] / recipe.base_time * building.speed_coefficient
+                    if not ingredient[0].energy_ingredient
+                    else ingredient[1]
+                )
             yield ProductionUnit(
                 recipe_name=f"{recipe.name}-{nb}",
                 building_name=building.name,
-                ingredients=immutables.Map(
-                    {
-                        ingredient[0]: ingredient[1]
-                        / recipe.base_time
-                        * building.speed_coefficient
-                        if not ingredient[0].energy_ingredient
-                        else ingredient[1]
-                        for ingredient in ingredient_set
-                    }
-                ),
+                ingredients=immutables.Map(final_ingredients),
                 products=immutables.Map(
                     {
                         Item(

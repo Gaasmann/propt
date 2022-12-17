@@ -70,7 +70,8 @@ class ORToolsOptimizer(model_opt.Optimizer):
             ]
             min_items = external_constraints.get(item, 0.0)
             if min_items == 0.0:
-                constraint = solver.Add(sum(lhs_constraints) == min_items, name=f"{item.name}-{item.temperature}")
+                constraint = solver.Add(sum(lhs_constraints) >= min_items, name=f"{item.name}-{item.temperature}")
+                #constraint = solver.Add(sum(lhs_constraints) == min_items, name=f"{item.name}-{item.temperature}")
             else:  # Target constraints
                 constraint = solver.Add(sum(lhs_constraints) >= min_items, name=item.name)
             constraints.append(constraint)
@@ -152,16 +153,22 @@ class NetworkXProductionGraph:
         return f"item\n{item.name}{f'-{item.temperature}' if item.temperature else ''}"
 
     def _build_graph(self) -> nx.DiGraph:
-        g = nx.DiGraph(mclimit=4.0, nodesep=1.5, ranksep=1.0, packmode="node", splines="curved")
+        g = nx.DiGraph(splines="false")
         g.add_nodes_from(
-            (self._item_node_name(item) for item in self.production_map.items)
+            (self._item_node_name(item) for item in self.production_map.items),
+            node_type="item"
         )
         for prod_unit in self.production_map.production_units:
             pu_node = f"Prod unit\n{prod_unit.name}\nqty {prod_unit.quantity}"
-            g.add_node(pu_node)
+            g.add_node(pu_node, node_type="pu")
             for ingredient in prod_unit.ingredients.keys():
-                if ingredient in (model_opt.Item(name="Electricity"), model_opt.Item(name="water", temperature=15)):
-                    continue  # skipping electricity and water-15
+                if ingredient in (
+                        model_opt.Item(name="Electricity"),
+                        model_opt.Item(name="drill-head"),
+                        model_opt.Item(name="water", temperature=15),
+                        model_opt.Item(name="pressured-air", temperature=15),
+                ):
+                    continue  # skipping ubiquitous items
                 qty = -prod_unit.get_item_consumed_quantity_by_unit_of_time(ingredient)*prod_unit.quantity
                 g.add_edge(self._item_node_name(ingredient), pu_node, headlabel=f"{self._item_node_name(ingredient)[5:]}\n{qty:.3f}")
             for product in prod_unit.products:
@@ -172,3 +179,5 @@ class NetworkXProductionGraph:
 
     def write_dot(self, filepath: pathlib.Path) -> None:
         write_dot(self.graph, filepath)
+
+

@@ -1,4 +1,5 @@
 import pathlib
+import pickle
 
 import more_itertools
 
@@ -114,10 +115,14 @@ def main():
     item_constraints = [
         (new_opt_model.Item(name="automation-science-pack", temperature=None), 4/6),
         (new_opt_model.Item(name="logistic-science-pack", temperature=None), 2/6),
-        (new_opt_model.Item(name="Electricity", temperature=None), 2_000_000),
+        (new_opt_model.Item(name="py-science-pack", temperature=None), 2/6),
+        # (new_opt_model.Item(name="Electricity", temperature=None), 770_478_563),
+        (new_opt_model.Item(name="Electricity", temperature=None), 63_000_000), # TODO tests
         (new_opt_model.Item(name="big-electric-pole", temperature=None), 1),
         (new_opt_model.Item(name="reo", temperature=None), 1),
-        # (new_opt_model.Item(name="py-logistic-robot-01", temperature=None), 0.2),
+        (new_opt_model.Item(name="small-parts-02", temperature=None), 3),
+        (new_opt_model.Item(name="electronic-circuit", temperature=None), 2),
+        # (new_opt_model.Item(name="aramid", temperature=None), 5),
         # (new_opt_model.Item(name="syngas", temperature=15), -10000000),
         # (new_opt_model.Item(name="ash", temperature=None), -10000000),
     ]
@@ -137,7 +142,8 @@ def main():
         #     ),
         #     64,
         # ),
-        *add_mining_constraint(prod_map, "raw-coal", 64+74, 0),
+        # *add_mining_constraint(prod_map, "raw-coal", 64+74, 0),
+        *add_mining_constraint(prod_map, "raw-coal", 200, 0),  # TODO test
         *add_mining_constraint(prod_map, "coal", 0, 0),
         *add_mining_constraint(prod_map, "copper-ore", 45, 0),
         *add_mining_constraint(prod_map, "ore-lead", 48, 0),
@@ -145,11 +151,23 @@ def main():
         *add_mining_constraint(prod_map, "ore-aluminium", 22, 0),
         *add_mining_constraint(prod_map, "ore-tin", 26, 0), # not enough
         *add_mining_constraint(prod_map, "ore-iron", 125, 0),
-        # *add_mining_constraint(prod_map, "ore-zinc", 125, 0), # need some
+        *add_mining_constraint(prod_map, "ore-nickel", 96, 0),
+        *add_mining_constraint(prod_map, "ore-zinc", 87, 0),  # need some
 
 
         *[(pu, 0) for pu in prod_map.production_units if pu.building_name.startswith("bitumen-seep-mk")],
         *[(pu, 0) for pu in prod_map.production_units if pu.building_name.startswith("natural-gas-seep-mk")],
+        *[(pu, 0) for pu in prod_map.production_units if pu.building_name.endswith("-mk02")],
+        *[(pu, 0) for pu in prod_map.production_units if pu.building_name == "titanium-mine"],
+        *[(pu, 0) for pu in prod_map.production_units if pu.building_name == "aluminium-mine"],
+        *[(pu, 0) for pu in prod_map.production_units if pu.building_name == "iron-mine"],
+        *[(pu, 3) for pu in prod_map.production_units if pu.building_name == "phosphate-mine"],
+        *[(pu, 3) for pu in prod_map.production_units if pu.building_name == "salt-mine"],
+        *[(pu, 0) for pu in prod_map.production_units if pu.building_name == "copper-mine"],
+        *[(pu, 0) for pu in prod_map.production_units if pu.building_name == "lead-mine"],
+        *[(pu, 0) for pu in prod_map.production_units if pu.building_name == "tin-mine"],
+        *[(pu, 0) for pu in prod_map.production_units if pu.building_name == "coal-mine"],
+        *[(pu, 13) for pu in prod_map.production_units if pu.building_name == "oil-sand-extractor-mk01"],
         # *[(pu, 0) for pu in prod_map.production_units if pu.recipe_name == "coal-1"],
         *[
             (pu, 0)
@@ -172,6 +190,8 @@ def main():
     graph_begin.write_dot(pathlib.Path("all.dot"))
     graph = optimizers.NetworkXProductionGraph(result)
     graph.write_dot(pathlib.Path("newnew.dot"))
+    with open("graphou", "wb") as f:
+        pickle.dump(graph.graph, f)
 
 
 if __name__ == "__main__":

@@ -30,7 +30,8 @@ class JSONFactorioAssemblingMachineRepository(
     override_speed = {"moss-farm-mk01": 1.075,
                       "ralesia-plantation-mk01": 1.3152,
                       "seaweed-crop-mk01": 1.1,
-                      "auog-paddock-mk01": 2.0
+                      "auog-paddock-mk01": 2.0,
+                      "fawogae-plantation-mk01": 0.9
                       }
     def __init__(self, json_directory: pathlib.Path):
         super().__init__(filename="assembling-machine.json")

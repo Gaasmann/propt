@@ -278,10 +278,15 @@ class JSONFactorioGeneratorRecipeRepository(
     def build_objects(self, data: dict[str, Any]) -> Iterator[prototypes.Recipe]:
         assert len(data["energy_source"].keys()) < 2
         liquid = self._liquids[data["name"]]
-        temps = {temp for temp in self._available_recipe.product_temperatures[liquid]
-        if temp > 60 and temp < data["maximum_temperature"]}
+        temps = {
+            temp
+            for temp in self._available_recipe.product_temperatures[liquid]
+            if temp > 60 and temp < data["maximum_temperature"]
+        }
         for temp in temps:
-            amount = data["max_energy_production"] / (temp * liquid.heat_capacity * data["effectivity"])
+            amount = data["max_energy_production"] / (
+                data["maximum_temperature"] * liquid.heat_capacity * data["effectivity"]
+            )
             ingredients = (
                 prototypes.FluidIngredient(
                     obj=liquid,
@@ -292,7 +297,10 @@ class JSONFactorioGeneratorRecipeRepository(
             )
             products = (
                 prototypes.ProductItem(
-                    obj=prototypes.ELECTRICITY, amount=data["max_energy_production"],
+                    obj=prototypes.ELECTRICITY,
+                    amount=data["max_energy_production"]
+                    * temp
+                    / data["maximum_temperature"],
                 ),
             )
             recipe = prototypes.Recipe(
@@ -302,7 +310,7 @@ class JSONFactorioGeneratorRecipeRepository(
                 base_time=1.0,
                 hidden_from_player_crafting=True,
                 available_from_start=True,
-                category=data['name'],
+                category=data["name"],
             )
             for product in products:
                 self._recipe_per_product[product.obj.name].add(recipe)
